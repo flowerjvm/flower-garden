@@ -70,12 +70,72 @@ function Test-GardenWeb {
             -UseBasicParsing `
             -Uri $worldUrl `
             -TimeoutSec 2
-        return (
+        $verdantResponse = Invoke-WebRequest `
+            -UseBasicParsing `
+            -Uri "${worldUrl}worlds/verdant-signal-garden" `
+            -TimeoutSec 2
+
+        $htmlReady = (
             $response.StatusCode -eq 200 -and
             $response.Content.Contains("CHOOSE A WORLD") -and
             $response.Content.Contains("/worlds/first-bloom-meadow") -and
-            $response.Content.Contains("/worlds/verdant-signal-garden")
+            $response.Content.Contains("/worlds/verdant-signal-garden") -and
+            $verdantResponse.StatusCode -eq 200 -and
+            $verdantResponse.Content.Contains("Signal vs Timeout")
         )
+        if (-not $htmlReady) {
+            return $false
+        }
+
+        $assetMatches = [regex]::Matches(
+            $verdantResponse.Content,
+            '(?:href|src)="(?<path>/(?:assets|_next/static)/[^"]+\.(?<extension>css|js))"',
+            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+        )
+        $assets = @(
+            $assetMatches |
+                ForEach-Object {
+                    [pscustomobject]@{
+                        Path = $_.Groups["path"].Value
+                        Extension = $_.Groups["extension"].Value.ToLowerInvariant()
+                    }
+                } |
+                Sort-Object Path -Unique
+        )
+        if (
+            $assets.Count -eq 0 -or
+            -not ($assets.Extension -contains "css") -or
+            -not ($assets.Extension -contains "js")
+        ) {
+            return $false
+        }
+
+        foreach ($asset in $assets) {
+            $assetUrl = [System.Uri]::new(
+                [System.Uri]$worldUrl,
+                $asset.Path
+            ).AbsoluteUri
+            $assetResponse = Invoke-WebRequest `
+                -UseBasicParsing `
+                -Method Head `
+                -Uri $assetUrl `
+                -TimeoutSec 2
+            $contentType = $assetResponse.Headers["Content-Type"]
+            $expectedContentType = if ($asset.Extension -eq "css") {
+                '^text/css\b'
+            }
+            else {
+                '^(?:application|text)/javascript\b'
+            }
+            if (
+                $assetResponse.StatusCode -ne 200 -or
+                $contentType -notmatch $expectedContentType
+            ) {
+                return $false
+            }
+        }
+
+        return $true
     }
     catch {
         return $false

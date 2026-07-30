@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
 const projectRoot = new URL("../", import.meta.url);
@@ -108,6 +109,63 @@ test("server-renders Verdant Signal Garden as the second playable world", async 
   assert.match(html, /href="\/"/);
   assert.match(html, /href="\/worlds\/first-bloom-meadow"/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
+});
+
+test("production server serves the CSS and JavaScript needed by Verdant", async (t) => {
+  const { startProdServer } = await import("vinext/server/prod-server");
+  const production = await startProdServer({
+    host: "127.0.0.1",
+    port: 0,
+    outDir: fileURLToPath(new URL("../dist", import.meta.url)),
+    noCompression: true,
+  });
+  t.after(
+    () =>
+      new Promise((resolve, reject) => {
+        production.server.close((error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+        production.server.closeAllConnections?.();
+      }),
+  );
+
+  const origin = `http://127.0.0.1:${production.port}`;
+  const response = await fetch(`${origin}/worlds/verdant-signal-garden`);
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  const assetPaths = [
+    ...new Set(
+      [...html.matchAll(
+        /(?:href|src)="(\/(?:assets|_next\/static)\/[^"]+\.(?:css|js))"/gi,
+      )].map((match) => match[1]),
+    ),
+  ];
+
+  assert.ok(
+    assetPaths.some((assetPath) => assetPath.endsWith(".css")),
+    "Verdant HTML must reference at least one stylesheet",
+  );
+  assert.ok(
+    assetPaths.some((assetPath) => assetPath.endsWith(".js")),
+    "Verdant HTML must reference at least one JavaScript module",
+  );
+
+  for (const assetPath of assetPaths) {
+    const assetResponse = await fetch(`${origin}${assetPath}`, {
+      method: "HEAD",
+    });
+    assert.equal(assetResponse.status, 200, `${assetPath} must be served`);
+    const contentType = assetResponse.headers.get("content-type") ?? "";
+    if (assetPath.endsWith(".css")) {
+      assert.match(contentType, /^text\/css\b/i);
+    } else {
+      assert.match(contentType, /^(?:application|text)\/javascript\b/i);
+    }
+  }
 });
 
 test("removes starter preview code and declares the 3D world dependencies", async () => {
