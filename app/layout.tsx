@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
 
-const title = "Flower Garden · First Bloom Meadow";
+const title = "Flower Garden · 월드 선택";
 const description =
-  "실제 Flower Runtime의 Flow, Step, Signal, Timeout을 3D 정원에서 실행하며 배우는 마이크로월드.";
+  "실제 Flower Runtime을 3D 월드로 투영해 핵심부터 배우는 플레이 가능한 마이크로월드 커리큘럼.";
 
 function firstForwardedValue(value: string | null): string | undefined {
   return value?.split(",")[0]?.trim() || undefined;
@@ -57,7 +57,7 @@ export async function generateMetadata(): Promise<Metadata> {
           url: socialImage,
           width: 1728,
           height: 909,
-          alt: "Flower Garden의 voxel 정원과 The First Flow",
+          alt: "Flower Garden의 voxel 정원과 첫 번째 학습 월드",
         },
       ],
     },

@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import Link from "next/link";
 import { projectVerdantSignal } from "../../../web/projection/verdantSignalProjection";
 import {
   defaultVerdantRuntimeAdapter,
@@ -166,7 +167,8 @@ interface Notice {
 export interface VerdantSignalGardenProps {
   runtime?: VerdantRuntimeAdapter;
   recordedBundles?: Partial<Record<VerdantScenarioId, unknown>>;
-  backHref?: string;
+  homeHref?: string;
+  previousHref?: string;
   nextHref?: string;
   className?: string;
 }
@@ -313,7 +315,8 @@ function scenarioById(id: VerdantScenarioId): VerdantScenario {
 export function VerdantSignalGarden({
   runtime = defaultVerdantRuntimeAdapter,
   recordedBundles,
-  backHref = "/",
+  homeHref = "/",
+  previousHref = "/worlds/first-bloom-meadow",
   nextHref,
   className,
 }: VerdantSignalGardenProps) {
@@ -581,7 +584,11 @@ export function VerdantSignalGarden({
       aria-labelledby="verdant-mission-title"
     >
       <header className={styles.header}>
-        <a className={styles.brand} href={backHref} aria-label="Flower Garden 홈">
+        <Link
+          className={styles.brand}
+          href={homeHref}
+          aria-label="Flower Garden 월드 선택"
+        >
           <span className={styles.brandMark} aria-hidden="true">
             <i />
             <i />
@@ -591,7 +598,7 @@ export function VerdantSignalGarden({
             <strong>Flower Garden</strong>
             <small>실행하며 배우는 Flower microworld</small>
           </span>
-        </a>
+        </Link>
         <div
           className={joinClasses(
             styles.runtimeBadge,
@@ -607,7 +614,7 @@ export function VerdantSignalGarden({
       </header>
 
       <nav className={styles.crumbs} aria-label="현재 학습 위치">
-        <a href={backHref}>01 First Bloom Meadow</a>
+        <Link href={previousHref}>01 First Bloom Meadow</Link>
         <span aria-hidden="true">/</span>
         <strong>02 Verdant Signal Garden</strong>
         <span aria-hidden="true">/</span>
@@ -1057,13 +1064,13 @@ export function VerdantSignalGarden({
       </section>
 
       <nav className={styles.worldNav} aria-label="Flower Garden 월드">
-        <a href={backHref}>
+        <Link href={previousHref}>
           <span>01</span>
           <span>
             <small>이전 월드</small>
             <strong>First Bloom Meadow</strong>
           </span>
-        </a>
+        </Link>
         <div className={styles.currentWorld}>
           <span>02</span>
           <span>
@@ -1073,13 +1080,13 @@ export function VerdantSignalGarden({
           <b>PLAYING</b>
         </div>
         {nextHref ? (
-          <a href={nextHref}>
+          <Link href={nextHref}>
             <span>03</span>
             <span>
               <small>다음 월드</small>
               <strong>Checkpoint Hollow</strong>
             </span>
-          </a>
+          </Link>
         ) : (
           <div className={styles.lockedWorld} aria-disabled="true">
             <span>03</span>

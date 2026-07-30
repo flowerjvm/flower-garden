@@ -371,7 +371,11 @@ export function FirstBloomMeadow() {
   return (
     <main className="flower-garden-shell">
       <header className="garden-header">
-        <div className="brand-lockup">
+        <Link
+          className="brand-lockup"
+          href="/"
+          aria-label="Flower Garden 월드 선택"
+        >
           <div className="brand-mark" aria-hidden="true">
             <span />
             <span />
@@ -381,7 +385,7 @@ export function FirstBloomMeadow() {
             <p className="brand-name">Flower Garden</p>
             <p className="brand-tagline">Flower를 실행하며 배우는 마이크로월드</p>
           </div>
-        </div>
+        </Link>
         <div
           className={`runtime-badge ${
             mode === "LIVE_RUNTIME"

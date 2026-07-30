@@ -47,13 +47,39 @@ async function render(pathname = "/") {
   );
 }
 
-test("server-renders the Flower Garden learning shell", async () => {
+test("server-renders the lightweight Flower Garden world library", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>Flower Garden · First Bloom Meadow<\/title>/i);
+  assert.match(html, /<title>Flower Garden · 월드 선택<\/title>/i);
+  assert.match(html, /Flower Garden/);
+  assert.match(html, /플레이할 게임을 고르세요/);
+  assert.match(html, /First Bloom Meadow/);
+  assert.match(html, /The First Flow/);
+  assert.match(html, /Verdant Signal Garden/);
+  assert.match(html, /Signal vs Timeout/);
+  assert.match(html, /Engine/);
+  assert.match(html, /Worker/);
+  assert.match(html, /StepResult/);
+  assert.match(html, /Checkpoint Grove/);
+  assert.match(html, /href="\/worlds\/first-bloom-meadow"/);
+  assert.match(html, /href="\/worlds\/verdant-signal-garden"/);
+  assert.doesNotMatch(html, /RUNTIME TRACE/);
+  assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
+});
+
+test("server-renders First Bloom Meadow as the first playable world", async () => {
+  const response = await render("/worlds/first-bloom-meadow");
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
+
+  const html = await response.text();
+  assert.match(
+    html,
+    /<title>Flower Garden · First Bloom Meadow<\/title>/i,
+  );
   assert.match(html, /Flower Garden/);
   assert.match(html, /First Bloom Meadow/);
   assert.match(html, /The First Flow/);
@@ -61,6 +87,7 @@ test("server-renders the Flower Garden learning shell", async () => {
   assert.match(html, /Engine/);
   assert.match(html, /Worker/);
   assert.match(html, /StepResult/);
+  assert.match(html, /href="\/"/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
@@ -78,18 +105,31 @@ test("server-renders Verdant Signal Garden as the second playable world", async 
   assert.match(html, /Verdant Signal Garden/);
   assert.match(html, /Signal vs Timeout/);
   assert.match(html, /SIGNAL_THEN_TIMEOUT/);
+  assert.match(html, /href="\/"/);
+  assert.match(html, /href="\/worlds\/first-bloom-meadow"/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
 test("removes starter preview code and declares the 3D world dependencies", async () => {
-  const [page, layout, packageJson] = await Promise.all([
+  const [page, firstWorldRoute, catalog, layout, packageJson] =
+    await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/worlds/first-bloom-meadow/page.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../worlds/catalog.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
-  ]);
+    ]);
 
-  assert.match(page, /FirstBloomMeadow/);
-  assert.match(layout, /Flower Garden · First Bloom Meadow/);
+  assert.match(page, /WORLD_CATALOG/);
+  assert.match(page, /CURRICULUM_ROADMAP/);
+  assert.doesNotMatch(page, /FirstBloomMeadow|VerdantSignalGarden|three/);
+  assert.match(firstWorldRoute, /FirstBloomMeadow/);
+  assert.match(catalog, /first-bloom-meadow/);
+  assert.match(catalog, /verdant-signal-garden/);
+  assert.match(layout, /Flower Garden · 월드 선택/);
   assert.match(layout, /<html lang="ko">/);
   assert.match(packageJson, /"@react-three\/fiber"/);
   assert.match(packageJson, /"three"/);

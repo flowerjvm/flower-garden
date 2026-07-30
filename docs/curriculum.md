@@ -12,6 +12,12 @@ A learner should know which object performed an action before learning a race
 involving that action. The curriculum starts with Flower's core execution chain
 and adds Signal and Timeout only after that vocabulary is stable.
 
+The root route is the curriculum library rather than a mission. It lists
+playable world modules in learning order, shows each mission's concepts and
+prerequisites before entry, and keeps future themes visibly separate as a
+roadmap. First Bloom Meadow is available at `/worlds/first-bloom-meadow`;
+Verdant Signal Garden is available at `/worlds/verdant-signal-garden`.
+
 ## 01. First Bloom Meadow
 
 Status: **AVAILABLE**

@@ -12,7 +12,8 @@ Windows에서는 저장소 루트의 **`PLAY.cmd`를 더블클릭**하면 됩니
 1. 첫 실행에 필요한 웹 의존성과 Maven을 준비합니다.
 2. 실제 Flower 0.1.1 Runtime을 시작합니다.
 3. 변경된 경우에만 3D 웹 게임을 빌드하고 시작합니다.
-4. 두 번째 월드 `Verdant Signal Garden`을 브라우저에서 자동으로 엽니다.
+4. 플레이 가능한 게임이 모인 `Flower Garden` 월드 선택 화면을 자동으로
+   엽니다.
 
 플레이하는 동안 런처 창을 열어두고, 종료할 때 그 창에서 Enter를
 누르세요. 런처가 자신이 시작한 프로세스만 종료합니다.
@@ -36,6 +37,11 @@ Flower Garden
 The first playable mission deliberately comes before Signal, Timeout,
 Checkpoint, Retry, or Worker lifecycle lessons. It gives each core runtime
 object a stable visual meaning before later worlds combine those objects.
+
+`/` is the lightweight world library. Each playable game is an independently
+addressable world module with its own manifest, route, projection, and mission,
+then registered in `worlds/catalog.ts`. This behaves like a game-plugin
+catalog without dynamically loading remote code.
 
 ## Architectural invariant
 
@@ -123,8 +129,14 @@ The web application runs on `http://127.0.0.1:3000`. The gateway runs on
 Set `NEXT_PUBLIC_FLOWER_RUNTIME_URL` before starting the web app to use a
 different gateway.
 
-Open the core world at `/` and Verdant Signal Garden at
+Open the world library at `/`, First Bloom Meadow at
+`/worlds/first-bloom-meadow`, and Verdant Signal Garden at
 `/worlds/verdant-signal-garden`.
+
+Both worlds share the same web application and the same Flower Runtime
+gateway. A new world does not need its own server; it adds a runtime module only
+when its mission needs new authoritative behavior. The one-click launcher hides
+the local web/JVM process split from the player.
 
 If the JVM gateway is unavailable, either UI may replay its matching
 checked-in canonical trace. That mode remains visibly labelled as a

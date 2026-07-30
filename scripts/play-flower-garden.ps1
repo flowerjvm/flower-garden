@@ -12,7 +12,7 @@ $ErrorActionPreference = "Stop"
 $rootDirectory = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $runtimeDirectory = Join-Path $rootDirectory "runtime"
 $mavenWrapper = Join-Path $runtimeDirectory "mvnw.cmd"
-$worldUrl = "http://127.0.0.1:3000/worlds/verdant-signal-garden"
+$worldUrl = "http://127.0.0.1:3000/"
 $runtimeUrl = "http://127.0.0.1:8080"
 $sessionDirectory = Join-Path $rootDirectory ".flower-garden"
 $logDirectory = Join-Path $sessionDirectory "logs"
@@ -72,7 +72,9 @@ function Test-GardenWeb {
             -TimeoutSec 2
         return (
             $response.StatusCode -eq 200 -and
-            $response.Content.Contains("Verdant Signal Garden")
+            $response.Content.Contains("CHOOSE A WORLD") -and
+            $response.Content.Contains("/worlds/first-bloom-meadow") -and
+            $response.Content.Contains("/worlds/verdant-signal-garden")
         )
     }
     catch {
@@ -528,7 +530,7 @@ try {
     }
 
     Write-Host ""
-    Write-Host "READY: Verdant Signal Garden" -ForegroundColor Green
+    Write-Host "READY: Flower Garden World Select" -ForegroundColor Green
     Write-Host $worldUrl -ForegroundColor Cyan
     Write-Host "Mode: LIVE - actual Flower Runtime" -ForegroundColor Green
     Write-Host ""
