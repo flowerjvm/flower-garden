@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowerjvm.dev/flower-garden/contracts/trace-bundle.schema.json",
+  "title": "Flower Garden Trace Bundle",
+  "description": "A contiguous trace plus the few versions required for deterministic projection replay.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "runId",
+    "worldId",
+    "missionId",
+    "flowerVersion",
+    "flowDefinitionVersion",
+    "projectionVersion",
+    "events"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "runId": {
+      "$ref": "trace-event.schema.json#/$defs/id"
+    },
+    "worldId": {
+      "$ref": "trace-event.schema.json#/$defs/slug"
+    },
+    "missionId": {
+      "$ref": "trace-event.schema.json#/$defs/slug"
+    },
+    "flowerVersion": {
+      "const": "0.1.1"
+    },
+    "flowDefinitionVersion": {
+      "$ref": "trace-event.schema.json#/$defs/id"
+    },
+    "projectionVersion": {
+      "$ref": "trace-event.schema.json#/$defs/id"
+    },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "trace-event.schema.json"
+      }
+    },
+    "expectedOutcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "finalSequence",
+        "status"
+      ],
+      "properties": {
+        "finalSequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "status": {
+          "enum": [
+            "RUNNING",
+            "COMPLETED",
+            "FAILED",
+            "CANCELLED"
+          ]
+        },
+        "finalState": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "workerTicks": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowerjvm.dev/flower-garden/contracts/run-command.schema.json",
+  "title": "Flower Garden v1 Run Command",
+  "description": "One idempotent First Bloom TICK command applied by the JVM coordinator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "commandId",
+    "runId",
+    "expectedSequence",
+    "kind",
+    "payload"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "commandId": {
+      "$ref": "trace-event.schema.json#/$defs/id"
+    },
+    "runId": {
+      "$ref": "trace-event.schema.json#/$defs/id"
+    },
+    "expectedSequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "kind": {
+      "const": "TICK"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 0
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../contracts/world-manifest.schema.json",
+  "schemaVersion": "1.0.0",
+  "id": "first-bloom-meadow",
+  "displayName": "First Bloom Meadow",
+  "catalogOrder": 1,
+  "status": "AVAILABLE",
+  "runtimeModuleId": "flower-garden-runtime-gateway",
+  "projectionModuleId": "first-bloom-meadow-web",
+  "missions": [
+    {
+      "id": "the-first-flow",
+      "displayName": "The First Flow",
+      "status": "AVAILABLE",
+      "learningObjectives": [
+        "Explain Engine → Worker → Flow → Step → StepResult.",
+        "Observe one actual Flower Worker tick per player TICK command.",
+        "Compare STAY with DONE across the four-tick core mission.",
+        "Explain that advancing to a Step and entering it happen on separate Flower ticks."
+      ],
+      "allowedCommands": [
+        "TICK"
+      ]
+    }
+  ]
+}

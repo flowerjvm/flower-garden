@@ -1,0 +1,24 @@
+{
+  "$schema": "../../contracts/world-manifest.schema.json",
+  "schemaVersion": "1.0.0",
+  "id": "verdant-signal-garden",
+  "displayName": "Verdant Signal Garden",
+  "catalogOrder": 2,
+  "status": "PLANNED",
+  "runtimeModuleId": null,
+  "projectionModuleId": null,
+  "missions": [
+    {
+      "id": "signal-vs-timeout",
+      "displayName": "Signal vs Timeout",
+      "status": "PLANNED",
+      "learningObjectives": [
+        "Explain that a Signal wakes a Step while StepResult decides the transition.",
+        "Distinguish trace input order from the mission Step's explicit Signal/Timeout check precedence.",
+        "Use the actual mission StepResult to explain which downstream path Flower selects.",
+        "Confirm that an exited Wait cannot be reopened by a later input."
+      ],
+      "allowedCommands": []
+    }
+  ]
+}

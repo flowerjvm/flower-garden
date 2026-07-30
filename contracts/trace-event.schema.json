@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowerjvm.dev/flower-garden/contracts/trace-event.schema.json",
+  "title": "Flower Garden Trace Event",
+  "description": "One immutable runtime-side observation. Sequence is the only canonical order within a run.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "runId",
+    "sequence",
+    "logicalTimeMillis",
+    "source",
+    "kind",
+    "flow",
+    "payload",
+    "evidence"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "eventId": {
+      "$ref": "#/$defs/id"
+    },
+    "runId": {
+      "$ref": "#/$defs/id"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "logicalTimeMillis": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source": {
+      "enum": [
+        "RUN_COORDINATOR",
+        "FLOWER_LISTENER",
+        "FLOWER_EVENT_BUS",
+        "FLOWER_STEP"
+      ]
+    },
+    "kind": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*(\\.[A-Z][A-Z0-9_]*)+$"
+    },
+    "flow": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/flow"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "payload": {
+      "type": "object"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "slug": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "flow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "key",
+        "state",
+        "stepId",
+        "stepNo"
+      ],
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/id"
+        },
+        "key": {
+          "$ref": "#/$defs/id"
+        },
+        "state": {
+          "enum": [
+            "CREATED",
+            "READY",
+            "RUNNING",
+            "FINISHED",
+            "FAILED",
+            "CANCELLED",
+            "CHECKPOINT_FAILED"
+          ]
+        },
+        "stepId": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stepNo": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "ref",
+        "label"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "CONTRACT",
+            "SOURCE",
+            "TEST"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        }
+      }
+    }
+  }
+}
