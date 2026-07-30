@@ -3,6 +3,24 @@
 Flower Garden is a collection of small, playful 3D worlds for learning Flower
 through prediction, real execution, observation, and evidence.
 
+## 가장 쉬운 실행
+
+Windows에서는 저장소 루트의 **`PLAY.cmd`를 더블클릭**하면 됩니다.
+
+런처가 한 번에 처리합니다.
+
+1. 첫 실행에 필요한 웹 의존성과 Maven을 준비합니다.
+2. 실제 Flower 0.1.1 Runtime을 시작합니다.
+3. 변경된 경우에만 3D 웹 게임을 빌드하고 시작합니다.
+4. 두 번째 월드 `Verdant Signal Garden`을 브라우저에서 자동으로 엽니다.
+
+플레이하는 동안 런처 창을 열어두고, 종료할 때 그 창에서 Enter를
+누르세요. 런처가 자신이 시작한 프로세스만 종료합니다.
+
+필수 프로그램은 Node.js 22.13 이상과 JDK 17 이상입니다. Maven은
+프로젝트에 포함된 Maven Wrapper가 자동으로 준비하므로 별도로 설치할
+필요가 없습니다.
+
 The game starts with Flower core:
 
 ```text
@@ -81,26 +99,27 @@ They do not compare timestamps or choose a route in the browser.
 ## Prerequisites
 
 - Node.js `>=22.13.0`
-- Java `>=17`
-- Maven `>=3.9`
+- JDK `>=17`
 
 ## Run locally
 
-Install and start the web application:
+Windows에서는 위의 `PLAY.cmd` 더블클릭을 권장합니다. 명령줄에서 같은
+런처를 실행하려면 다음 한 줄이면 됩니다.
 
-```bash
-npm install
-npm run dev
+```powershell
+.\PLAY.cmd
 ```
 
-In another terminal, start the real Flower runtime gateway:
+개별 서비스를 직접 디버깅해야 할 때만 다음처럼 실행합니다. Maven은
+저장소의 Wrapper를 사용합니다.
 
-```bash
-mvn -f runtime/pom.xml spring-boot:run
+```powershell
+.\runtime\mvnw.cmd -f runtime\pom.xml spring-boot:run
+npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
-The web application runs on `http://localhost:3000`. The gateway runs on
-`http://localhost:8080`; the current browser client uses that URL by default.
+The web application runs on `http://127.0.0.1:3000`. The gateway runs on
+`http://127.0.0.1:8080`; the one-click launcher configures that URL.
 Set `NEXT_PUBLIC_FLOWER_RUNTIME_URL` before starting the web app to use a
 different gateway.
 
@@ -166,7 +185,7 @@ questions that require multiple completed worlds first.
 ## Verify
 
 ```bash
-mvn -f runtime/pom.xml clean test
+./runtime/mvnw -f runtime/pom.xml clean test
 npm run fixtures:verdant:check
 npm test
 ```

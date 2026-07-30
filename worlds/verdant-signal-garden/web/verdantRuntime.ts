@@ -10,7 +10,7 @@ import {
   type VerdantTraceEvent,
 } from "./types";
 
-const DEFAULT_RUNTIME_URL = "http://localhost:8080";
+const DEFAULT_RUNTIME_URL = "http://127.0.0.1:8080";
 const CREATE_RUN_PATH = "/api/v1/worlds/verdant-signal-garden/runs";
 const REQUEST_TIMEOUT_MILLIS = 5_000;
 const EVENT_KIND_PATTERN = /^[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)+$/;

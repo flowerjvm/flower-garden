@@ -5,7 +5,7 @@ import type {
   TraceEvent,
 } from "./types";
 
-const DEFAULT_RUNTIME_URL = "http://localhost:8080";
+const DEFAULT_RUNTIME_URL = "http://127.0.0.1:8080";
 const FIRST_BLOOM_PATH = "/api/v1/worlds/first-bloom-meadow/runs";
 const REQUEST_TIMEOUT_MS = 4_000;
 const EVENT_SOURCES = new Set([
