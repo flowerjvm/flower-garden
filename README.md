@@ -1,15 +1,15 @@
 # Flower Garden
 
-**실제 Flower Runtime을 실행하며 배우는 3D 마이크로월드**
+[한국어](README.ko.md)
 
-Flower Garden은 [Flower](https://github.com/flowerjvm/flower)의 핵심 개념을
-작은 3D 게임으로 경험하는 학습 프로젝트입니다. 문서를 먼저 외우는 대신,
-플레이어가 결과를 **예측하고**, 실제 Flower에 명령을 보내고, 실행 trace와
-3D 세계를 함께 보며 왜 그런 결과가 나왔는지 확인합니다.
+**Learn Flower by projecting executions from the real Flower Runtime into
+playful 3D microworlds.**
 
-> **English:** Flower Garden is a collection of playful 3D microworlds for
-> learning Flower through prediction, real runtime execution, observation, and
-> source-backed evidence.
+Flower Garden is an educational game for learning the core concepts of
+[Flower](https://github.com/flowerjvm/flower). Instead of memorizing the
+documentation first, players **predict** an outcome, send commands to an actual
+Flower Runtime, and compare the resulting execution trace with its projection
+into a 3D world.
 
 <table>
   <tr>
@@ -21,69 +21,72 @@ Flower Garden은 [Flower](https://github.com/flowerjvm/flower)의 핵심 개념�
     </td>
   </tr>
   <tr>
-    <td><strong>01 · First Bloom Meadow</strong><br />Flower 실행의 가장 작은 핵심부터 시작합니다.</td>
-    <td><strong>02 · Verdant Signal Garden</strong><br />Signal과 Timeout의 경쟁을 직접 실험합니다.</td>
+    <td><strong>01 · First Bloom Meadow</strong><br />Start with the smallest useful Flower execution model.</td>
+    <td><strong>02 · Verdant Signal Garden</strong><br />Explore Signal and Timeout observations through an explicit Step policy.</td>
   </tr>
 </table>
 
-## 왜 Flower Garden인가요?
+## Why Flower Garden?
 
-Flower의 생태계가 커질수록 처음 배우는 사람은 `Engine`, `Worker`, `Flow`,
-`Step`, `Signal`, `Timeout`, `Checkpoint` 같은 용어를 한꺼번에 만나게
-됩니다. Flower Garden은 이 인식 부채를 줄이기 위해 한 월드에서 한 가지
-실행 계약만 다룹니다.
+As the Flower ecosystem grows, a new learner may encounter `Engine`, `Worker`,
+`Flow`, `Step`, `Signal`, `Timeout`, and `Checkpoint` all at once. Flower
+Garden reduces that conceptual overhead by teaching one runtime contract at a
+time in each world.
 
 ```text
-예측
+Predict
   ↓
-플레이어 명령
+Issue a player command
   ↓
-실제 Flower 실행
+Run the actual Flower Runtime
   ↓
-Runtime trace 관찰
+Observe the runtime trace
   ↓
-3D 세계에서 결과 확인
+See the result in the 3D world
   ↓
-관련 상태 전이 · 소스 · 테스트로 설명
+Explain it with transitions, source, and tests
 ```
 
-이 프로젝트의 가장 중요한 원칙은 다음과 같습니다.
+The project is built around one architectural invariant:
 
 ```text
-실제 Flower Runtime
+Actual Flower Runtime
         ↓
-실행 이벤트 · 상태 변경 기록
+Recorded execution events and state changes
         ↓
 World Projection
         ↓
-3D 게임 세계
+3D game world
 ```
 
-이 프로젝트에서 **Flow 상태, 현재 Step, StepResult와 최종 실행 결과에 대한
-유일한 권위는 실제 Flower Runtime입니다.** 브라우저와 3D 장면은 Step 전이,
-승리 경로 또는 최종 상태를 계산하지 않습니다. 실제 Flower가 만든 trace를
-학습자가 이해할 수 있는 세계로 투영할 뿐입니다.
+For workflow execution facts in Flower Garden, the actual Flower Runtime is the
+sole authority for Flow state, the current Step, StepResult, and the final
+execution outcome. The browser and 3D scenes never calculate a Step transition,
+winning path, or terminal state. They only reduce and project the trace produced
+by Flower into a world that is easier to understand.
 
-자세한 결정 근거는
-[ADR-0001](docs/adr/0001-runtime-authoritative-world-projection.md), 실행
-계약은 [contracts/README.md](contracts/README.md)에서 확인할 수 있습니다.
+See [ADR-0001](docs/adr/0001-runtime-authoritative-world-projection.md) for the
+architectural decision and [contracts/README.md](contracts/README.md) for the
+wire contract.
 
-## 가장 쉽게 실행하기
+## Quick start
 
-공통으로 필요한 프로그램:
+### Requirements
 
-- Node.js `22.13` 이상
-- JDK `17` 이상
+- Node.js `22.13` or newer
+- JDK `17` or newer
+- An internet connection during the first launch
+- Local ports `3000` and `8080`
 
-Maven은 별도로 설치하지 않아도 됩니다. 최초 실행에는 npm/Maven 의존성을
-받기 위한 인터넷 연결이 필요하며, 로컬 포트 `3000`과 `8080`을 사용합니다.
+Maven does not need to be installed separately. The included Maven Wrapper
+downloads the required distribution.
 
 ### Windows
 
-1. 이 저장소를 내려받거나 clone합니다.
-2. 저장소 루트의 **`PLAY.cmd`를 더블클릭**합니다.
-3. 브라우저에서 원하는 월드를 선택합니다.
-4. 플레이가 끝나면 런처 창에서 Enter를 눌러 종료합니다.
+1. Download or clone this repository.
+2. Double-click **`PLAY.cmd`** in the repository root.
+3. Choose a world in the browser.
+4. When you finish playing, press Enter in the launcher window.
 
 ```powershell
 git clone https://github.com/flowerjvm/flower-garden.git
@@ -91,29 +94,29 @@ cd flower-garden
 .\PLAY.cmd
 ```
 
-첫 실행에서는 웹 의존성과 Maven Wrapper 배포본을 준비하므로 시간이 조금
-더 걸릴 수 있습니다. 그다음부터는 변경된 부분만 다시 빌드합니다.
+The first launch may take longer while npm and the Maven Wrapper download their
+dependencies. Later launches rebuild only when the source has changed.
 
-`PLAY.cmd`가 한 번에 처리하는 작업:
+`PLAY.cmd` handles the complete local session:
 
-1. 실행 환경 확인
-2. 실제 Flower `0.1.1` JVM Runtime 시작
-3. 3D 웹 애플리케이션 빌드 및 시작
-4. `http://127.0.0.1:3000/` 월드 선택 화면 열기
-5. 종료 시 런처가 시작한 프로세스만 정리
+1. verifies the required tools;
+2. starts the actual Flower `0.1.1` JVM Runtime;
+3. builds and starts the 3D web application;
+4. opens the world library at `http://127.0.0.1:3000/`;
+5. stops only the processes that it started.
 
-### macOS / Linux 또는 개발 모드
+### macOS, Linux, or development mode
 
-터미널 두 개를 사용합니다.
+Use two terminals.
 
-터미널 1:
+Terminal 1:
 
 ```bash
 SERVER_ADDRESS=127.0.0.1 \
   ./runtime/mvnw -f runtime/pom.xml spring-boot:run
 ```
 
-터미널 2:
+Terminal 2:
 
 ```bash
 npm ci
@@ -121,9 +124,9 @@ NEXT_PUBLIC_FLOWER_RUNTIME_URL=http://127.0.0.1:8080 \
   npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
-브라우저에서 `http://127.0.0.1:3000/`을 엽니다.
+Open `http://127.0.0.1:3000/`.
 
-## 플레이 가능한 월드
+## Playable worlds
 
 ### 01 · First Bloom Meadow
 
@@ -133,21 +136,21 @@ NEXT_PUBLIC_FLOWER_RUNTIME_URL=http://127.0.0.1:8080 \
 Engine → Worker → Flow → Step → StepResult
 ```
 
-네 번의 플레이어 `TICK`이 실제 `Worker.tickOnce()` 네 번으로 이어집니다.
+Four player `TICK` commands produce four actual `Worker.tickOnce()` calls.
 
-| Tick | 현재 Step | 실제 StepResult | 관찰할 내용 |
+| Tick | Current Step | Actual StepResult | What to observe |
 | ---: | --- | --- | --- |
-| 1 | `prepare-soil` | `STAY` | 현재 Step에 머무릅니다. |
-| 2 | `prepare-soil` | `DONE` | 다음 Step으로 전진합니다. |
-| 3 | `grow-stem` | `DONE` | 다음 Step은 이후 tick에서 실행됩니다. |
-| 4 | `bloom` | `DONE` | Flow가 `FINISHED`가 됩니다. |
+| 1 | `prepare-soil` | `STAY` | The Flow remains on the current Step. |
+| 2 | `prepare-soil` | `DONE` | The Flow advances to the next Step. |
+| 3 | `grow-stem` | `DONE` | The next Step runs on a later tick. |
+| 4 | `bloom` | `DONE` | The Flow becomes `FINISHED`. |
 
-이 월드에서는 다음을 배웁니다.
+This world teaches:
 
-- Engine에 연결된 Worker가 Flow를 실행하는 방식
-- 한 번의 Flow tick에서 해당 Flow의 현재 Step은 최대 하나만 실행된다는 계약
-- `STAY`와 `DONE`의 차이
-- Step 이동과 다음 Step 실행이 서로 다른 tick이라는 경계
+- how an attached Engine, Worker, Flow, and Step fit together;
+- that one Flow tick invokes at most one current Step for that Flow;
+- the difference between `STAY` and `DONE`;
+- the boundary between advancing to a Step and executing that Step.
 
 ### 02 · Verdant Signal Garden
 
@@ -157,40 +160,41 @@ Engine → Worker → Flow → Step → StepResult
 Event → Signal → StepContext → ManualClock → StepResult
 ```
 
-플레이어가 실제 `ManualClock`과 Signal 입력을 바꾼 뒤, 다음 Worker tick의
-결과를 예측합니다.
+The player changes a real `ManualClock`, optionally publishes a real event, and
+predicts what the next Worker tick will observe.
 
-| Scenario | 결정 tick 이전의 사실 | 실제 정책과 결과 |
+| Scenario | Facts before the deciding tick | Actual policy and result |
 | --- | --- | --- |
 | Signal at 29s | Signal=true, Timeout=false | `GOTO yard-move` |
 | Timeout at 30s | Signal=false, Timeout=true | `GOTO timed-out` |
 | Both at 30s | Signal=true, Timeout=true | `SIGNAL_THEN_TIMEOUT` → `yard-move` |
 
-이 월드에서는 다음을 배웁니다.
+This world teaches:
 
-- Signal은 Step을 깨우는 힌트이고 전이를 직접 결정하지 않는다는 점
-- 시간을 전진시키는 것과 Worker를 tick하는 것이 별도 명령이라는 점
-- 둘 이상의 조건이 참일 때 Flow의 명시적 Step 정책이 우선순위를 정한다는 점
-- 종료된 Wait는 늦게 도착한 Signal로 다시 열리지 않는다는 점
+- a Signal is a wake-up hint and does not directly choose a transition;
+- advancing time and ticking a Worker are separate commands;
+- when multiple predicates are true, the Step's explicit policy determines
+  precedence;
+- a late Signal cannot reopen a Wait that Flower has already exited.
 
-다음 커리큘럼에는 Checkpoint/Recovery, Worker Stop, Retry/Idempotency,
-장애 대응, 시각적 Flow 설계 월드를 계획하고 있습니다.
+Planned curriculum themes include Checkpoint/Recovery, Worker Stop,
+Retry/Idempotency, incident response, and visual Flow design.
 
-전체 학습 순서는 [docs/curriculum.md](docs/curriculum.md)에 정리되어 있습니다.
+See [docs/curriculum.md](docs/curriculum.md) for the complete learning order.
 
-## LIVE Runtime과 Recorded Replay
+## LIVE Runtime and Recorded Replay
 
-로컬에서 `PLAY.cmd`를 사용하면 UI가 실제 Flower JVM Runtime과 연결되어
-`LIVE`로 표시됩니다.
+When launched locally with `PLAY.cmd`, the Flower JVM Runtime Gateway is
+available. After the player starts a mission, that run is labelled `LIVE`.
 
-Runtime Gateway에 연결할 수 없는 환경에서는, 실제 Flower 실행으로 생성하고
-테스트로 검증한 canonical trace를 재생할 수 있습니다. 이 경우 UI는
-`RECORDED REPLAY`라고 명확히 표시하며, 재생 컨트롤은 기록된 이벤트 사이의
-커서만 이동합니다. Replay가 새로운 Flower 결과를 계산하지는 않습니다.
+If the Runtime Gateway is unavailable, a world may replay a canonical trace
+that was generated by real Flower execution and verified by tests. The UI
+clearly labels that mode as `RECORDED REPLAY`. Replay controls only move a
+cursor through recorded events; they never calculate a new Flower result.
 
-## 월드를 추가하는 방식
+## Adding a world
 
-월드는 독립된 학습 게임 모듈입니다.
+Each world is an independent educational game module:
 
 ```text
 worlds/<world-id>/
@@ -198,24 +202,26 @@ worlds/<world-id>/
 └─ web/
 ```
 
-완성된 월드는 [worlds/catalog.ts](worlds/catalog.ts)에 등록되어 월드 선택
-화면에 나타납니다. 모든 월드는 하나의 웹 애플리케이션과 공용 Flower Runtime
-Gateway를 사용하므로 월드마다 별도 서버를 만들 필요가 없습니다.
+A completed world is registered in [worlds/catalog.ts](worlds/catalog.ts) and
+then appears in the world library. All worlds share one web application and one
+Flower Runtime Gateway, so a new world does not require a separate server.
+The manifest and 3D UI live under `worlds/<world-id>`; the authoritative JVM
+mission implementations currently live in the shared `runtime/` module.
 
-현재 구조는 compile-time 등록 방식입니다. 외부 원격 코드를 동적으로
-불러오는 플러그인 마켓플레이스는 아직 구현하지 않았습니다.
+The current registry is compile-time and explicit. A marketplace that loads
+untrusted remote plugin code is deliberately out of scope for now.
 
-새 월드는 다음 순서로 완성합니다.
+Every new world should be completed in this order:
 
 ```text
-실제 Runtime 동작과 테스트
-→ trace 계약과 canonical fixture
-→ 순수 World Projection
+Actual runtime behavior and tests
+→ trace contract and canonical fixture
+→ pure World Projection
 → 3D UI
-→ manifest · route · catalog 등록
+→ manifest, route, and catalog registration
 ```
 
-## 개발자 안내
+## Developer reference
 
 ### Runtime API
 
@@ -225,33 +231,35 @@ POST /api/v1/worlds/verdant-signal-garden/runs
 POST /api/v1/runs/{runId}/commands
 ```
 
-명령에는 고유한 `commandId`, URL과 동일한 `runId`, 최신
-`expectedSequence`가 들어갑니다. 응답의 `events`는 delta가 아니라
-sequence 1부터 최신 이벤트까지의 누적 trace입니다.
+Every command contains a unique `commandId`, the same `runId` as the URL, and
+the latest `expectedSequence`. The response is a cumulative `RunView`: its
+`events` array contains the complete trace from sequence `1` through the latest
+event, not a delta.
 
-| Command | Payload | 실제 효과 |
+| Command | Payload | Actual effect |
 | --- | --- | --- |
-| `TICK` | `{}` | 해당 미션 Worker의 `tickOnce()`를 정확히 한 번 호출 |
-| `ADVANCE_TIME` | `{"millis": 1..300000}` | Verdant의 실제 `ManualClock`만 전진 |
-| `SEND_SIGNAL` | `{"name":"yard-assignment"}` | Verdant가 구독한 실제 미션 event 발행 |
+| `TICK` | `{}` | Calls the mission Worker's `tickOnce()` exactly once |
+| `ADVANCE_TIME` | `{"millis": 1..300000}` | Advances Verdant's actual `ManualClock` without ticking |
+| `SEND_SIGNAL` | `{"name":"yard-assignment"}` | Publishes Verdant's subscribed mission event |
 
-같은 전체 명령을 동일한 `commandId`로 재전송하면 원래 응답을 반환하고 명령을
-두 번 적용하지 않습니다. 같은 ID를 다른 내용으로 재사용하면 거부합니다.
+Retrying the same complete command with the same `commandId` returns its
+original response without applying the command twice. Reusing an ID with
+different command content is rejected.
 
-### 프로젝트 구조
+### Repository layout
 
 ```text
-app/                         웹 애플리케이션과 월드 선택 화면
-contracts/                   JSON Schema와 검증된 runtime trace
-docs/                        커리큘럼과 Architecture Decision Record
+app/                         web shell and world library
+contracts/                   JSON Schemas and verified runtime traces
+docs/                        curriculum and Architecture Decision Records
 runtime/                     Java 17 Spring Boot Flower Runtime Gateway
-web/                         공용 runtime client와 projection
+web/                         shared runtime client and projections
 worlds/
-  first-bloom-meadow/        첫 번째 월드 manifest와 3D UI
-  verdant-signal-garden/     두 번째 월드 manifest와 3D UI
+  first-bloom-meadow/        first world manifest and 3D UI
+  verdant-signal-garden/     second world manifest and 3D UI
 ```
 
-### 검증
+### Verification
 
 Windows:
 
@@ -263,7 +271,7 @@ npm test
 npm run play:smoke
 ```
 
-macOS / Linux:
+macOS or Linux:
 
 ```bash
 ./runtime/mvnw -f runtime/pom.xml test
@@ -272,27 +280,26 @@ npm run fixtures:verdant:check
 npm test
 ```
 
-Runtime 테스트는 실제 Flower 실행으로 First Bloom의 네 tick과 Verdant의
-세 Signal/Timeout 시나리오를 검증합니다. 테스트에는 고정 sleep을 사용하지
-않습니다.
+The runtime tests verify First Bloom's four ticks and all three Verdant
+Signal/Timeout scenarios through actual Flower execution without fixed sleeps.
 
-## 현재 범위
+## Current scope
 
-Flower Garden은 아직 초기 학습 월드를 확장하는 단계입니다. 현재 다음 기능은
-의도적으로 포함하지 않았습니다.
+Flower Garden is an early educational project. Runs and traces are held in
+memory and disappear when the Runtime restarts. It is not a production
+workflow service.
 
-현재 버전은 교육용 초기 프로젝트입니다. Run과 trace는 메모리에 보관되어
-Runtime을 재시작하면 사라지며, 운영용 workflow 서비스가 아닙니다.
+The following capabilities are deliberately not implemented yet:
 
-- 데이터베이스 기반 durable trace journal
-- Checkpoint, Retry, failure injection, Worker stop 게임 조작
-- SSE reconnect와 다중 replica routing
-- 동적 또는 원격 world plugin loader
+- a database-backed durable trace journal;
+- gameplay controls for Checkpoint, Retry, failure injection, or Worker Stop;
+- SSE reconnect and multi-replica routing;
+- a dynamic or remote world plugin loader.
 
-각 기능은 그 계약을 실제로 가르치는 플레이 가능한 월드가 생길 때 함께
-추가합니다.
+Each capability should be introduced together with the first playable world
+that genuinely needs to teach its contract.
 
-## 라이선스
+## License
 
-Flower Garden은 [Apache License 2.0](LICENSE)으로 공개됩니다.
-저작권과 고지 사항은 [NOTICE](NOTICE)를 확인하세요.
+Flower Garden is released under the [Apache License 2.0](LICENSE). See
+[NOTICE](NOTICE) for copyright and attribution notices.
