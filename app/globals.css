@@ -448,6 +448,107 @@ input:focus-visible {
   letter-spacing: 0.08em;
 }
 
+.first-bloom-role-card {
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid rgba(38, 85, 52, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 253, 238, 0.92);
+  box-shadow: inset 3px 0 0 #4f8752;
+}
+
+.first-bloom-role-card span,
+.first-bloom-role-card strong,
+.first-bloom-role-card p {
+  display: block;
+}
+
+.first-bloom-role-card span {
+  color: #708163;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.first-bloom-role-card strong {
+  margin-top: 4px;
+  color: #244c34;
+  font-size: 13px;
+}
+
+.first-bloom-role-card p {
+  margin: 5px 0 0;
+  color: #5d6b61;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.first-bloom-progress {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(46, 84, 52, 0.16);
+  border-radius: 12px;
+  background: rgba(243, 245, 222, 0.74);
+}
+
+.first-bloom-progress > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+
+.first-bloom-progress > div + div {
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+}
+
+.first-bloom-progress span,
+.first-bloom-progress small {
+  color: #708076;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.first-bloom-progress strong {
+  justify-self: end;
+  color: #2f5940;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.first-bloom-progress small {
+  grid-column: 1 / -1;
+  color: #64804f;
+}
+
+.first-bloom-progress ol {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  margin: 1px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.first-bloom-progress li {
+  height: 5px;
+  border-radius: 999px;
+  background: #d5ddc6;
+}
+
+.first-bloom-progress li.is-mastered {
+  background: linear-gradient(90deg, #4f8752, #8cb85a);
+  box-shadow: 0 0 0 2px rgba(79, 135, 82, 0.1);
+}
+
 .start-card,
 .completion-card {
   margin-top: 18px;
@@ -540,6 +641,13 @@ button:disabled {
 .prediction-block h2 {
   margin-top: 7px;
   font-size: 18px;
+}
+
+.first-bloom-prediction-context {
+  margin: 7px 0 0;
+  color: #5a685e;
+  font-size: 10px;
+  line-height: 1.55;
 }
 
 .prediction-options {
@@ -657,6 +765,252 @@ button:disabled {
   margin: 3px 0 0;
   font-size: 9px;
   line-height: 1.5;
+}
+
+.first-bloom-review {
+  margin-top: 18px;
+  padding-top: 17px;
+  border-top: 1px solid var(--line);
+}
+
+.first-bloom-review h2 {
+  margin: 7px 0 0;
+  color: #244c34;
+  font-size: 18px;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.first-bloom-review > p {
+  margin: 9px 0 0;
+  color: #5b695f;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.first-bloom-runtime-result {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 11px;
+}
+
+.first-bloom-runtime-result span,
+.first-bloom-runtime-result strong {
+  padding: 8px 9px;
+  border: 1px solid rgba(44, 82, 51, 0.15);
+  border-radius: 9px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-align: center;
+}
+
+.first-bloom-runtime-result span {
+  background: #f4f2df;
+  color: #647067;
+}
+
+.first-bloom-runtime-result strong {
+  background: #e8f0cf;
+  color: #295a3c;
+}
+
+.first-bloom-runtime-result.is-miss span {
+  border-color: rgba(155, 109, 47, 0.23);
+  background: #fff0c8;
+  color: #79551f;
+}
+
+.first-bloom-observing {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: #eaf0d5;
+  color: #426044;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.first-bloom-observing span {
+  color: #659b4e;
+  animation: first-bloom-pulse 900ms ease-in-out infinite alternate;
+}
+
+.first-bloom-review-trace {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(49, 85, 54, 0.16);
+  border-radius: 9px;
+  background: #f4f3e3;
+}
+
+.first-bloom-review-trace > span {
+  margin-bottom: 2px;
+  color: #6a8556;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.first-bloom-review-trace code {
+  overflow: hidden;
+  color: #36563e;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes first-bloom-pulse {
+  from {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.first-bloom-evidence-options {
+  display: grid;
+  gap: 7px;
+  margin-top: 11px;
+}
+
+.first-bloom-evidence-options button {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  align-items: center;
+  min-height: 48px;
+  padding: 9px 10px;
+  border: 1px solid rgba(48, 84, 53, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 254, 245, 0.88);
+  color: #526157;
+  font-size: 10px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+}
+
+.first-bloom-evidence-options button > span {
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  border-radius: 50%;
+  background: #eef1dc;
+  color: #57735b;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.first-bloom-evidence-options button:hover:not(:disabled) {
+  border-color: rgba(53, 103, 62, 0.42);
+  background: #f6f4df;
+}
+
+.first-bloom-evidence-options button.is-selected {
+  border-color: #527653;
+  background: #edf2d7;
+}
+
+.first-bloom-evidence-options button.is-wrong {
+  border-color: rgba(165, 104, 46, 0.45);
+  background: #fff0c8;
+  color: #704b1e;
+}
+
+.first-bloom-evidence-options button.is-wrong > span {
+  background: #f5d79b;
+  color: #774f1e;
+}
+
+.first-bloom-evidence-options button.is-correct {
+  border-color: rgba(48, 111, 61, 0.5);
+  background: #e2f0c9;
+  color: #28553a;
+  box-shadow: inset 3px 0 0 #4f8752;
+}
+
+.first-bloom-evidence-options button.is-correct > span {
+  background: #4f8752;
+  color: #fffbdc;
+}
+
+.first-bloom-review-feedback {
+  margin-top: 10px;
+  padding: 10px 11px;
+  border-radius: 10px;
+}
+
+.first-bloom-review-feedback.is-wrong {
+  border: 1px solid rgba(160, 101, 44, 0.26);
+  background: #fff2ce;
+  color: #704e24;
+}
+
+.first-bloom-review-feedback.is-correct {
+  border: 1px solid rgba(50, 111, 62, 0.23);
+  background: #e6f1cc;
+  color: #2e5a3c;
+}
+
+.first-bloom-review-feedback strong {
+  font-size: 10px;
+}
+
+.first-bloom-review-feedback p {
+  margin: 4px 0 0;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.first-bloom-continue {
+  margin-top: 11px;
+}
+
+.first-bloom-contract-summary {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 15px;
+}
+
+.first-bloom-contract-summary span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #405b48;
+  font-size: 9px;
+}
+
+.first-bloom-contract-summary i {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #4f8752;
+  color: #fffbdc;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.first-bloom-incomplete {
+  border-color: rgba(163, 103, 45, 0.3);
+  background: #fff1cc;
 }
 
 .world-stage {
@@ -869,6 +1223,29 @@ button:disabled {
   list-style: none;
 }
 
+.first-bloom-trace-callout {
+  display: grid;
+  gap: 3px;
+  margin-top: 11px;
+  padding: 9px 10px;
+  border: 1px solid rgba(67, 115, 66, 0.2);
+  border-radius: 9px;
+  background: #e8f0d1;
+}
+
+.first-bloom-trace-callout strong {
+  color: #315a3d;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.05em;
+}
+
+.first-bloom-trace-callout span {
+  color: #5d6d60;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
 .trace-list li {
   position: relative;
   padding-left: 7px;
@@ -906,6 +1283,17 @@ button:disabled {
 .trace-list button:hover,
 .trace-list li.is-active button {
   background: #eef1dc;
+}
+
+.trace-list li.is-lesson-evidence button {
+  background: rgba(239, 244, 209, 0.9);
+  box-shadow: inset 3px 0 0 #80a954;
+}
+
+.trace-list li.is-lesson-evidence .trace-sequence {
+  border-color: #6e964e;
+  color: #315a3d;
+  box-shadow: 0 0 0 3px rgba(111, 157, 76, 0.1);
 }
 
 .trace-sequence {

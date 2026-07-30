@@ -430,6 +430,45 @@
   font-weight: 800;
 }
 
+.curriculumProgress {
+  margin-top: 13px;
+  padding: 10px 11px;
+  border: 1px solid rgba(54, 96, 61, 0.16);
+  border-radius: 11px;
+  background: rgba(255, 254, 245, 0.7);
+}
+
+.curriculumProgress > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #5d6f61;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.curriculumProgress strong {
+  color: #28563a;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+}
+
+.curriculumProgress > div {
+  height: 5px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dfe5d1;
+}
+
+.curriculumProgress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #51864f, #d0b843);
+  transition: width 260ms ease;
+}
+
 .scenarioPicker,
 .predictionPicker {
   display: grid;
@@ -472,6 +511,19 @@
   border-color: #397047;
   background: #e2efd1;
   box-shadow: inset 3px 0 0 #4f8957;
+}
+
+.scenarioCard.complete {
+  border-color: rgba(63, 119, 68, 0.35);
+  background: #edf4dc;
+}
+
+.scenarioCard.locked {
+  background: rgba(236, 235, 223, 0.72);
+}
+
+.scenarioCard.locked > span:first-child {
+  background: #909a8d;
 }
 
 .scenarioCard > span:first-child {
@@ -596,6 +648,325 @@
   line-height: 1.45;
 }
 
+.replayLesson {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid rgba(150, 112, 45, 0.24);
+  border-radius: 13px;
+  background: #fff1cd;
+}
+
+.replayLesson h2,
+.proofCard h2,
+.predictionWorkbench h2 {
+  margin: 5px 0 0;
+  color: #2b5138;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.replayLesson > p:not(.eyebrow),
+.proofCard > p:not(.eyebrow) {
+  margin: 8px 0 0;
+  color: #606b62;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.nextInstruction {
+  display: grid;
+  grid-template-columns: 29px minmax(0, 1fr);
+  gap: 9px;
+  margin-top: 13px;
+  padding: 11px;
+  border: 1px solid rgba(56, 100, 63, 0.18);
+  border-radius: 11px;
+  background: #eef2d9;
+}
+
+.nextInstruction > span {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border-radius: 8px;
+  background: #3b6d49;
+  color: #fff8cb;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.nextInstruction p,
+.nextInstruction strong {
+  display: block;
+}
+
+.nextInstruction p {
+  margin: 0;
+  color: #5d6a60;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.nextInstruction strong {
+  margin-bottom: 2px;
+  color: #2e5339;
+  font-size: 10px;
+}
+
+.predictionWorkbench {
+  margin-top: 13px;
+  padding: 12px;
+  border: 1px solid rgba(55, 102, 61, 0.2);
+  border-radius: 12px;
+  background: rgba(244, 246, 224, 0.9);
+}
+
+.compactPrediction {
+  margin: 11px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.compactPrediction legend {
+  margin-bottom: 6px;
+  color: #3b5f43;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.compactPrediction > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.compactPrediction button {
+  min-height: 42px;
+  padding: 6px 7px;
+  border: 1px solid rgba(53, 89, 58, 0.18);
+  border-radius: 8px;
+  background: #fffdf1;
+  text-align: left;
+  cursor: pointer;
+}
+
+.compactPrediction button.selected {
+  border-color: #397047;
+  background: #dceccd;
+  box-shadow: inset 3px 0 0 #4f8957;
+}
+
+.compactPrediction strong,
+.compactPrediction small {
+  display: block;
+}
+
+.compactPrediction strong {
+  color: #285238;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+}
+
+.compactPrediction small {
+  margin-top: 2px;
+  color: #6b776d;
+  font-size: 7px;
+}
+
+.predictionReceipt {
+  margin-top: 9px;
+  padding: 9px 10px;
+  border: 1px solid rgba(66, 122, 70, 0.2);
+  border-radius: 9px;
+  background: #e7f2d9;
+}
+
+.predictionReceipt.incorrect {
+  border-color: rgba(174, 98, 56, 0.25);
+  background: #fff0d5;
+}
+
+.predictionReceipt strong,
+.predictionReceipt span {
+  display: block;
+}
+
+.predictionReceipt strong {
+  color: #315b3b;
+  font-size: 9px;
+}
+
+.predictionReceipt.incorrect strong {
+  color: #864a31;
+}
+
+.predictionReceipt span {
+  margin-top: 3px;
+  color: #657168;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 7px;
+  line-height: 1.45;
+}
+
+.actionConsole {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.actionConsole > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.actionConsole > div:first-child > span {
+  color: #647466;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.actionGrid {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.actionButton {
+  display: grid;
+  min-height: 47px;
+  grid-template-columns: 35px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid rgba(49, 90, 56, 0.2);
+  border-radius: 10px;
+  background: #fffdf0;
+  color: #31543a;
+  text-align: left;
+  cursor: pointer;
+}
+
+.actionButton > span:first-child {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 8px;
+  background: #e2ead1;
+  color: #396445;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.actionButton.workerAction {
+  border-color: rgba(34, 83, 52, 0.36);
+  background: linear-gradient(145deg, #235a3d, #143f2b);
+  color: #fff8cb;
+}
+
+.actionButton.workerAction > span:first-child {
+  background: rgba(255, 249, 201, 0.14);
+  color: #fff3a5;
+}
+
+.actionButton > span:last-child,
+.actionButton strong,
+.actionButton small {
+  display: block;
+}
+
+.actionButton strong {
+  font-size: 10px;
+}
+
+.actionButton small {
+  margin-top: 2px;
+  color: #6f7b72;
+  font-size: 8px;
+}
+
+.actionButton.workerAction small {
+  color: rgba(255, 250, 215, 0.66);
+}
+
+.causalFeedback {
+  margin-top: 9px;
+  padding: 10px;
+  border-left: 3px solid #d0b346;
+  border-radius: 3px 9px 9px 3px;
+  background: #f7f0d1;
+}
+
+.causalFeedback span {
+  color: #6d774e;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.causalFeedback p {
+  margin: 4px 0 0;
+  color: #566359;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.commandHistory {
+  display: grid;
+  gap: 4px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.commandHistory li {
+  display: grid;
+  grid-template-columns: 21px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  background: rgba(235, 238, 217, 0.65);
+}
+
+.commandHistory li > span {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 6px;
+  background: #607c5e;
+  color: white;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.commandHistory p,
+.commandHistory strong,
+.commandHistory small {
+  display: block;
+  margin: 0;
+}
+
+.commandHistory strong {
+  color: #3c5842;
+  font-size: 8px;
+}
+
+.commandHistory small {
+  margin-top: 1px;
+  color: #768078;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 6px;
+}
+
 .predictionPicker {
   padding-top: 15px;
   border-top: 1px solid var(--line);
@@ -685,6 +1056,11 @@
   background: linear-gradient(145deg, #fff0cb, #fff8e2);
 }
 
+.resultCard.failed {
+  border-color: rgba(177, 83, 59, 0.3);
+  background: linear-gradient(145deg, #ffe4d5, #fff5dd);
+}
+
 .resultCard h2 {
   margin-top: 6px;
   font-size: 17px;
@@ -732,6 +1108,86 @@
   background: rgba(70, 119, 69, 0.1);
   color: #315c3b;
   font-weight: 800;
+}
+
+.checkList {
+  display: grid;
+  gap: 6px;
+  margin: 11px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checkList li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  color: #59675d;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.checkList li > span {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border-radius: 50%;
+  background: #dfead3;
+  color: #397044;
+  font-weight: 900;
+}
+
+.checkList li.fail > span {
+  background: #f6d8ca;
+  color: #a14e38;
+}
+
+.proofCard {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid rgba(62, 113, 67, 0.24);
+  border-radius: 13px;
+  background: linear-gradient(145deg, #edf4d9, #fff6d6);
+}
+
+.proofOptions {
+  display: grid;
+  gap: 6px;
+  margin-top: 11px;
+}
+
+.proofOption {
+  padding: 9px 10px;
+  border: 1px solid rgba(56, 92, 60, 0.2);
+  border-radius: 9px;
+  background: #fffdf0;
+  color: #435847;
+  font-size: 8px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+}
+
+.proofOption:hover,
+.proofOption.selected {
+  border-color: #44764d;
+  background: #e2efd4;
+}
+
+.proofFeedback {
+  margin: 9px 0 0 !important;
+  padding: 8px;
+  border-radius: 8px;
+  background: #dfeeda;
+  color: #315c3b !important;
+  font-weight: 750;
+}
+
+.proofFeedback.incorrect {
+  background: #f9dfcf;
+  color: #864832 !important;
 }
 
 .replayingCard {

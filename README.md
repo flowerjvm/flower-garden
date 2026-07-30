@@ -137,6 +137,10 @@ Engine → Worker → Flow → Step → StepResult
 ```
 
 Four player `TICK` commands produce four actual `Worker.tickOnce()` calls.
+Before each tick, the player predicts the real `StepResult`. After each tick,
+the next command remains locked until the player identifies the supporting
+runtime event. A wrong prediction is preserved as a learning comparison, while
+a wrong evidence answer must be corrected before play continues.
 
 | Tick | Current Step | Actual StepResult | What to observe |
 | ---: | --- | --- | --- |
@@ -152,6 +156,10 @@ This world teaches:
 - the difference between `STAY` and `DONE`;
 - the boundary between advancing to a Step and executing that Step.
 
+`Runtime FINISHED` and `LESSON CLEARED` are intentionally different states:
+the flower run can finish before the player has demonstrated all four runtime
+contracts.
+
 ### 02 · Verdant Signal Garden
 
 **Mission: Signal vs Timeout**
@@ -161,13 +169,18 @@ Event → Signal → StepContext → ManualClock → StepResult
 ```
 
 The player changes a real `ManualClock`, optionally publishes a real event, and
-predicts what the next Worker tick will observe.
+predicts what the next Worker tick will observe. Every button sends exactly one
+runtime command; there is no pre-scripted scenario macro.
 
 | Scenario | Facts before the deciding tick | Actual policy and result |
 | --- | --- | --- |
 | Signal at 29s | Signal=true, Timeout=false | `GOTO yard-move` |
 | Timeout at 30s | Signal=false, Timeout=true | `GOTO timed-out` |
 | Both at 30s | Signal=true, Timeout=true | `SIGNAL_THEN_TIMEOUT` → `yard-move` |
+
+The three challenges unlock in order. A run that reaches the wrong route is
+shown as `MISSION FAILED` with the missing trace facts, and a successful runtime
+outcome still requires a final evidence answer before the lesson is cleared.
 
 This world teaches:
 

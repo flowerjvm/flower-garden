@@ -551,7 +551,7 @@ export function VerdantSignalScene(props: VerdantSignalSceneProps) {
       camera={{ position: [12, 11, 15], fov: 40, near: 0.1, far: 80 }}
       dpr={[1, 1.4]}
       frameloop="demand"
-      shadows
+      shadows="percentage"
       gl={{
         antialias: false,
         alpha: false,

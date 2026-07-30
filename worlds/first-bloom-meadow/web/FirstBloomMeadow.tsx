@@ -12,6 +12,13 @@ import {
   FIRST_BLOOM_STEPS,
   projectFirstBloom,
 } from "../../../web/projection/firstBloomProjection";
+import {
+  canRequestFirstBloomTick,
+  evaluateFirstBloomEvidenceAnswer,
+  FIRST_BLOOM_LESSON_BEATS,
+  isFirstBloomLessonCleared,
+  type FirstBloomLessonBeat,
+} from "./learningGame";
 import type {
   EvidenceItem,
   NormalizedRun,
@@ -41,12 +48,15 @@ const PREDICTIONS: Array<{
     label: "DONE",
     description: "현재 Step을 완료한다",
   },
-  {
-    value: "NEXT_STEP",
-    label: "다음 Step",
-    description: "즉시 다음 Step에 들어간다",
-  },
 ];
+
+const LEARNING_EVIDENCE_EVENT_TYPES = new Set([
+  "FLOWER.STEP_ENTERED",
+  "FLOWER.STEP_RESULT",
+  "FLOWER.STEP_EXITED",
+  "FLOWER.FLOW_FINISHED",
+  "GARDEN.TICK_COMPLETED",
+]);
 
 const STEP_COPY: Record<
   string,
@@ -107,6 +117,17 @@ interface PredictionResult {
   predicted: TickPrediction;
   actual: "STAY" | "DONE" | "UNKNOWN";
   correct: boolean;
+}
+
+interface PendingReview {
+  beat: FirstBloomLessonBeat;
+  events: TraceEvent[];
+  predicted: TickPrediction;
+  actual: PredictionResult["actual"];
+  predictionCorrect: boolean;
+  selectedChoiceId?: string;
+  passed: boolean;
+  feedback?: string;
 }
 
 function acceptCumulativeTrace(
@@ -189,6 +210,10 @@ export function FirstBloomMeadow() {
   const [predictionResults, setPredictionResults] = useState<
     PredictionResult[]
   >([]);
+  const [pendingReview, setPendingReview] = useState<PendingReview | null>(
+    null,
+  );
+  const [masteredBeatIds, setMasteredBeatIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedStepId, setSelectedStepId] = useState<string | undefined>(
@@ -245,6 +270,8 @@ export function FirstBloomMeadow() {
     setPlaybackTarget(initialCursor);
     setPrediction(null);
     setPredictionResults([]);
+    setPendingReview(null);
+    setMasteredBeatIds([]);
     setNotice(message);
   }
 
@@ -261,6 +288,8 @@ export function FirstBloomMeadow() {
       setPlaybackTarget(liveRun.events.length);
       setPrediction(null);
       setPredictionResults([]);
+      setPendingReview(null);
+      setMasteredBeatIds([]);
     } catch {
       activateRecordedReplay(
         "Flower Runtime에 연결되지 않아, 실제 런타임에서 미리 기록한 canonical trace를 재생합니다. 아래 조작은 새 결과를 계산하지 않고 기록 cursor만 이동합니다.",
@@ -271,7 +300,18 @@ export function FirstBloomMeadow() {
   }
 
   async function runTick() {
-    if (!run || !prediction || busy || isPlaying) return;
+    const beat = FIRST_BLOOM_LESSON_BEATS[predictionResults.length];
+    if (
+      !run ||
+      !prediction ||
+      !beat ||
+      pendingReview ||
+      busy ||
+      isPlaying ||
+      viewCursor !== availableCursor
+    ) {
+      return;
+    }
     setBusy(true);
     setNotice(null);
     const beforeCursor = availableCursor;
@@ -316,6 +356,15 @@ export function FirstBloomMeadow() {
           correct: prediction === actual.value,
         },
       ]);
+      setPendingReview({
+        beat,
+        events: revealed,
+        predicted: prediction,
+        actual: actual.value,
+        predictionCorrect: prediction === actual.value,
+        passed: false,
+      });
+      setEvidenceOpen(false);
       setPrediction(null);
       beginReveal(beforeCursor, nextCursor);
     } catch {
@@ -327,6 +376,39 @@ export function FirstBloomMeadow() {
     }
   }
 
+  function answerEvidenceQuestion(choiceId: string) {
+    if (!pendingReview || pendingReview.passed || isPlaying) return;
+
+    const result = evaluateFirstBloomEvidenceAnswer(
+      pendingReview.beat,
+      choiceId,
+      pendingReview.events,
+    );
+    setPendingReview((current) =>
+      current
+        ? {
+            ...current,
+            selectedChoiceId: choiceId,
+            passed: result.correct,
+            feedback: result.message,
+          }
+        : current,
+    );
+
+    if (result.correct) {
+      setMasteredBeatIds((current) =>
+        current.includes(pendingReview.beat.id)
+          ? current
+          : [...current, pendingReview.beat.id],
+      );
+    }
+  }
+
+  function continueAfterReview() {
+    if (!pendingReview?.passed) return;
+    setPendingReview(null);
+  }
+
   function resetRun() {
     setRun(null);
     setMode(null);
@@ -336,6 +418,8 @@ export function FirstBloomMeadow() {
     setPlaybackTarget(0);
     setPrediction(null);
     setPredictionResults([]);
+    setPendingReview(null);
+    setMasteredBeatIds([]);
     setNotice(null);
     setSelectedStepId("prepare-soil");
   }
@@ -359,14 +443,33 @@ export function FirstBloomMeadow() {
       items.findIndex((candidate) => candidate.id === item.id) === index,
   );
   const visibleEvents = events.slice(0, availableCursor);
-  const latestPrediction = predictionResults.at(-1);
-  const canTick =
-    Boolean(run) &&
-    Boolean(prediction) &&
-    !busy &&
-    !isPlaying &&
-    latestProjection.phase !== "FINISHED" &&
-    latestProjection.phase !== "FAILED";
+  const activeBeat = FIRST_BLOOM_LESSON_BEATS[predictionResults.length];
+  const lessonCleared = isFirstBloomLessonCleared(
+    latestProjection.phase,
+    masteredBeatIds,
+  );
+  const lessonStateLabel = pendingReview?.passed
+    ? "CHECK PASSED"
+    : pendingReview
+      ? "EVIDENCE CHECK"
+      : lessonCleared
+        ? "CLEARED"
+        : run
+          ? "IN PROGRESS"
+          : "NOT STARTED";
+  const reviewEventSequences = new Set(
+    pendingReview?.events.map((event) => event.sequence) ?? [],
+  );
+  const canTick = canRequestFirstBloomTick({
+    hasRun: Boolean(run),
+    hasPrediction: Boolean(prediction),
+    reviewPending: Boolean(pendingReview),
+    busy,
+    isPlaying,
+    atLatestCursor: viewCursor === availableCursor,
+    runtimePhase: latestProjection.phase,
+    completedTickCount: predictionResults.length,
+  });
 
   return (
     <main className="flower-garden-shell">
@@ -456,23 +559,84 @@ export function FirstBloomMeadow() {
           </div>
 
           <p className="mission-intro">
-            Worker가 한 번 tick할 때마다 실제 Flower Runtime이 어떤 Step을
-            실행하고 어떤 StepResult를 받는지 예측하세요.
+            당신은 Flow를 마음대로 움직이는 조종사가 아닙니다. 실제 Flower
+            Runtime에 Worker tick을 한 번씩 요청하고, 그 결과가 왜 나왔는지
+            Trace로 증명하는 관찰자입니다.
           </p>
+
+          <div className="first-bloom-role-card">
+            <span>당신의 역할</span>
+            <strong>Worker Tick 관찰자</strong>
+            <p>
+              예측은 결과를 바꾸지 않습니다. Flower가 실행한 뒤 근거 문제를
+              풀어야 다음 tick이 열립니다.
+            </p>
+          </div>
 
           <div className="mission-goal">
             <span aria-hidden="true">✦</span>
             <p>
               <strong>목표</strong>
-              씨앗에서 꽃까지 세 Step의 경계를 Trace로 설명하기
+              네 번의 실제 tick을 관찰하고 Engine → Worker → Flow → Step →
+              StepResult 계약을 4/4로 설명하기
             </p>
           </div>
+
+          <div
+            className="first-bloom-progress"
+            role="status"
+            aria-label={`학습 진행 ${masteredBeatIds.length} / ${FIRST_BLOOM_LESSON_BEATS.length}`}
+          >
+            <div>
+              <span>RUNTIME</span>
+              <strong>{latestProjection.phase}</strong>
+            </div>
+            <div>
+              <span>LESSON</span>
+              <strong>
+                {masteredBeatIds.length}/{FIRST_BLOOM_LESSON_BEATS.length}
+              </strong>
+              <small>{lessonStateLabel}</small>
+            </div>
+            <ol aria-hidden="true">
+              {FIRST_BLOOM_LESSON_BEATS.map((beat) => (
+                <li
+                  key={beat.id}
+                  className={
+                    masteredBeatIds.includes(beat.id) ? "is-mastered" : ""
+                  }
+                />
+              ))}
+            </ol>
+          </div>
+
+          {run && !isPlaying && viewCursor !== availableCursor && (
+            <div className="prediction-result is-learning" role="status">
+              <span aria-hidden="true">↶</span>
+              <div>
+                <strong>과거 Trace 관찰 중</strong>
+                <p>
+                  과거 이벤트를 보는 동안에는 새 Worker tick을 실행하지
+                  않습니다. 최신 Runtime 위치로 돌아오면 다음 조작이
+                  열립니다.
+                </p>
+                <button
+                  type="button"
+                  className="secondary-action"
+                  onClick={() => scrubTo(availableCursor)}
+                >
+                  최신 Trace로 돌아가기
+                </button>
+              </div>
+            </div>
+          )}
 
           {!run ? (
             <div className="start-card">
               <p>
-                먼저 실행을 만들면 Flow가 Worker의 READY 대기열에
-                들어갑니다.
+                시작하면 실제 Engine에 하나의 Flow가 만들어지고 Worker의
+                READY 대기열에 들어갑니다. 이후에는 매번 예측 → 실제 tick →
+                근거 확인 순서로 진행합니다.
               </p>
               <button
                 className="primary-action"
@@ -480,17 +644,135 @@ export function FirstBloomMeadow() {
                 onClick={startRun}
                 disabled={busy}
               >
-                {busy ? "Runtime을 깨우는 중…" : "첫 실행 만들기"}
+                {busy ? "Runtime을 깨우는 중…" : "관찰 미션 시작"}
               </button>
             </div>
-          ) : latestProjection.phase === "FINISHED" ? (
+          ) : pendingReview ? (
+            <div className="first-bloom-review">
+              <div className="prediction-heading">
+                <p className="eyebrow">
+                  TICK {pendingReview.beat.tick} · TRACE CHECK
+                </p>
+                <span>{pendingReview.beat.focus}</span>
+              </div>
+              <h2>{pendingReview.beat.reviewTitle}</h2>
+              <div
+                className={`first-bloom-runtime-result ${
+                  pendingReview.predictionCorrect ? "is-match" : "is-miss"
+                }`}
+              >
+                <span>예측 {pendingReview.predicted}</span>
+                <strong>실제 {pendingReview.actual}</strong>
+              </div>
+              <p>{pendingReview.beat.evidenceQuestion}</p>
+
+              {isPlaying && (
+                <div className="first-bloom-observing" role="status">
+                  <span aria-hidden="true">●</span>
+                  3D 세계가 실제 Trace를 재생하고 있습니다…
+                </div>
+              )}
+
+              {!isPlaying && (
+                <div
+                  className="first-bloom-review-trace"
+                  aria-label={`Tick ${pendingReview.beat.tick} 핵심 Trace`}
+                >
+                  <span>ACTUAL TRACE</span>
+                  {pendingReview.events
+                    .filter((event) =>
+                      LEARNING_EVIDENCE_EVENT_TYPES.has(event.type),
+                    )
+                    .map((event) => (
+                      <code key={event.eventId}>
+                        {event.type}
+                        {event.stepId ? ` · ${event.stepId}` : ""}
+                        {typeof event.payload.result === "string"
+                          ? ` → ${event.payload.result}`
+                          : ""}
+                      </code>
+                    ))}
+                </div>
+              )}
+
+              <div className="first-bloom-evidence-options">
+                {pendingReview.beat.evidenceChoices.map((choice) => {
+                  const selected =
+                    pendingReview.selectedChoiceId === choice.id;
+                  const answerClass = selected
+                    ? pendingReview.passed
+                      ? "is-correct"
+                      : pendingReview.feedback
+                        ? "is-wrong"
+                        : "is-selected"
+                    : "";
+                  return (
+                    <button
+                      key={choice.id}
+                      type="button"
+                      className={answerClass}
+                      onClick={() => answerEvidenceQuestion(choice.id)}
+                      disabled={isPlaying || pendingReview.passed}
+                      aria-pressed={selected}
+                    >
+                      <span aria-hidden="true">
+                        {selected && pendingReview.passed
+                          ? "✓"
+                          : selected && pendingReview.feedback
+                            ? "↻"
+                            : "○"}
+                      </span>
+                      {choice.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {pendingReview.feedback && (
+                <div
+                  className={`first-bloom-review-feedback ${
+                    pendingReview.passed ? "is-correct" : "is-wrong"
+                  }`}
+                  role={pendingReview.passed ? "status" : "alert"}
+                >
+                  <strong>
+                    {pendingReview.passed
+                      ? "계약을 이해했습니다"
+                      : "아직 근거가 다릅니다"}
+                  </strong>
+                  <p>{pendingReview.feedback}</p>
+                </div>
+              )}
+
+              {pendingReview.passed && (
+                <button
+                  type="button"
+                  className="primary-action first-bloom-continue"
+                  onClick={continueAfterReview}
+                >
+                  {pendingReview.beat.tick ===
+                  FIRST_BLOOM_LESSON_BEATS.length
+                    ? "학습 결과 확인"
+                    : `TICK ${pendingReview.beat.tick + 1} 준비`}
+                </button>
+              )}
+            </div>
+          ) : lessonCleared ? (
             <div className="completion-card">
-              <p className="eyebrow">FLOW FINISHED</p>
-              <h2>첫 꽃이 피었습니다.</h2>
+              <p className="eyebrow">LESSON CLEARED · RUNTIME FINISHED</p>
+              <h2>첫 Flow를 설명할 수 있게 되었습니다.</h2>
               <p>
-                결과를 만든 것은 3D 애니메이션이 아니라 Flower가 반환한
-                StepResult입니다.
+                네 계약을 모두 Trace로 확인했습니다. 3D 꽃이 아니라 실제
+                StepResult와 FLOWER.FLOW_FINISHED가 완료를 증명합니다.
               </p>
+              <div className="first-bloom-contract-summary">
+                {FIRST_BLOOM_LESSON_BEATS.map((beat) => (
+                  <span key={beat.id}>
+                    <i aria-hidden="true">✓</i>
+                    {beat.focus}
+                  </span>
+                ))}
+              </div>
               <button
                 type="button"
                 className="secondary-action"
@@ -499,16 +781,35 @@ export function FirstBloomMeadow() {
                 새 실행 시작
               </button>
             </div>
-          ) : (
+          ) : latestProjection.phase === "FINISHED" ? (
+            <div className="completion-card first-bloom-incomplete">
+              <p className="eyebrow">RUNTIME FINISHED · LESSON NOT CLEARED</p>
+              <h2>Flow는 끝났지만 학습 확인이 남았습니다.</h2>
+              <p>
+                Runtime 완료와 학습 완료는 다릅니다. 새 실행에서 각 tick의
+                근거 문제를 통과해 4/4 계약을 확인하세요.
+              </p>
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={resetRun}
+              >
+                학습 다시 시작
+              </button>
+            </div>
+          ) : activeBeat ? (
             <>
               <div className="prediction-block">
                 <div className="prediction-heading">
                   <p className="eyebrow">
-                    TICK {predictionResults.length + 1} · 실행 전
+                    TICK {activeBeat.tick} · 실행 전
                   </p>
-                  <span>{formatStep(latestProjection.currentStepId)}</span>
+                  <span>{activeBeat.focus}</span>
                 </div>
-                <h2>다음 tick의 결과는?</h2>
+                <h2>{activeBeat.predictionPrompt}</h2>
+                <p className="first-bloom-prediction-context">
+                  {activeBeat.predictionContext}
+                </p>
                 <div className="prediction-options">
                   {PREDICTIONS.map((option) => (
                     <button
@@ -526,7 +827,9 @@ export function FirstBloomMeadow() {
                   ))}
                 </div>
                 <p className="prediction-note">
-                  예측은 학습 기록일 뿐, Runtime 결과를 바꾸지 않습니다.
+                  {mode === "RECORDED_REPLAY"
+                    ? "이 선택은 가설입니다. 새 Runtime 명령을 보내지 않고, 실제 실행에서 기록된 다음 Worker tick 구간을 관찰합니다."
+                    : "이 선택은 가설입니다. 정답과 세계 상태는 실제 Runtime Trace가 결정합니다."}
                 </p>
               </div>
 
@@ -540,36 +843,33 @@ export function FirstBloomMeadow() {
                   ↻
                 </span>
                 <span>
-                  <strong>{busy ? "Flower 실행 중…" : "Worker tick"}</strong>
-                  <small>실제 Flow를 한 번 진행</small>
+                  <strong>
+                    {busy
+                      ? mode === "RECORDED_REPLAY"
+                        ? "기록 불러오는 중…"
+                        : "Flower 실행 중…"
+                      : mode === "RECORDED_REPLAY"
+                        ? "기록된 Worker tick 관찰"
+                        : "실제 Worker tick 실행"}
+                  </strong>
+                  <small>
+                    {mode === "RECORDED_REPLAY"
+                      ? "canonical Trace의 다음 tick 구간만 재생합니다"
+                      : "완료 뒤 근거 문제를 풀어야 다음 tick이 열립니다"}
+                  </small>
                 </span>
               </button>
             </>
-          )}
-
-          {latestPrediction && (
-            <div
-              className={`prediction-result ${
-                latestPrediction.correct ? "is-correct" : "is-learning"
-              }`}
-              aria-live="polite"
-            >
-              <span aria-hidden="true">
-                {latestPrediction.correct ? "✓" : "↗"}
-              </span>
-              <div>
-                <strong>
-                  예상 {latestPrediction.predicted} · 실제{" "}
-                  {latestPrediction.actual}
-                </strong>
-                <p>
-                  {latestPrediction.predicted === "NEXT_STEP"
-                    ? "다음 Step 이동은 DONE의 효과입니다. NEXT_STEP이라는 StepResult는 없습니다."
-                    : latestPrediction.correct
-                      ? "실제 Trace와 예측이 일치했습니다."
-                      : "Trace를 되감아 StepResult가 결정된 순간을 확인해 보세요."}
-                </p>
-              </div>
+          ) : (
+            <div className="completion-card first-bloom-incomplete">
+              <h2>학습 단계를 불러오지 못했습니다.</h2>
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={resetRun}
+              >
+                새 실행 시작
+              </button>
             </div>
           )}
         </aside>
@@ -676,40 +976,61 @@ export function FirstBloomMeadow() {
               ))}
             </div>
           ) : (
-            <ol className="trace-list">
-              {visibleEvents.length === 0 && (
-                <li className="trace-empty">
-                  실행을 만들면 FlowerListener의 첫 기록이 여기에 나타납니다.
-                </li>
+            <>
+              {pendingReview && (
+                <div className="first-bloom-trace-callout">
+                  <strong>TICK {pendingReview.beat.tick} 근거</strong>
+                  <span>
+                    빛나는 이벤트가 방금 실제 Worker tick에서 추가된
+                    기록입니다.
+                  </span>
+                </div>
               )}
-              {visibleEvents.map((event, index) => {
-                const active = index + 1 === viewCursor;
-                return (
-                  <li
-                    key={`${event.sequence}-${event.type}`}
-                    className={active ? "is-active" : ""}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => scrubTo(index + 1)}
-                      aria-label={`${event.sequence}번 이벤트로 이동: ${event.summary}`}
-                    >
-                      <span className="trace-sequence">
-                        {String(event.sequence).padStart(2, "0")}
-                      </span>
-                      <span className="trace-body">
-                        <small>
-                          {event.source.replaceAll("_", " ")} ·{" "}
-                          {(event.logicalTimeMillis / 1000).toFixed(1)}s
-                        </small>
-                        <strong>{event.type}</strong>
-                        <p>{event.summary}</p>
-                      </span>
-                    </button>
+              <ol className="trace-list">
+                {visibleEvents.length === 0 && (
+                  <li className="trace-empty">
+                    실행을 만들면 FlowerListener의 첫 기록이 여기에
+                    나타납니다.
                   </li>
-                );
-              })}
-            </ol>
+                )}
+                {visibleEvents.map((event, index) => {
+                  const active = index + 1 === viewCursor;
+                  const lessonEvidence = reviewEventSequences.has(
+                    event.sequence,
+                  );
+                  const eventClassName = [
+                    active ? "is-active" : "",
+                    lessonEvidence ? "is-lesson-evidence" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
+                  return (
+                    <li
+                      key={`${event.sequence}-${event.type}`}
+                      className={eventClassName}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => scrubTo(index + 1)}
+                        aria-label={`${event.sequence}번 이벤트로 이동: ${event.summary}`}
+                      >
+                        <span className="trace-sequence">
+                          {String(event.sequence).padStart(2, "0")}
+                        </span>
+                        <span className="trace-body">
+                          <small>
+                            {event.source.replaceAll("_", " ")} ·{" "}
+                            {(event.logicalTimeMillis / 1000).toFixed(1)}s
+                          </small>
+                          <strong>{event.type}</strong>
+                          <p>{event.summary}</p>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </>
           )}
         </aside>
       </section>

@@ -418,7 +418,7 @@ export function FirstBloomScene(props: FirstBloomSceneProps) {
       camera={{ position: [12, 11, 15], fov: 40, near: 0.1, far: 80 }}
       dpr={[1, 1.45]}
       frameloop="demand"
-      shadows
+      shadows="percentage"
       gl={{
         antialias: false,
         alpha: false,
@@ -436,4 +436,3 @@ export function FirstBloomScene(props: FirstBloomSceneProps) {
     </Canvas>
   );
 }
-
