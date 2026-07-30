@@ -291,3 +291,8 @@ Runtime을 재시작하면 사라지며, 운영용 workflow 서비스가 아닙�
 
 각 기능은 그 계약을 실제로 가르치는 플레이 가능한 월드가 생길 때 함께
 추가합니다.
+
+## 라이선스
+
+Flower Garden은 [Apache License 2.0](LICENSE)으로 공개됩니다.
+저작권과 고지 사항은 [NOTICE](NOTICE)를 확인하세요.
