@@ -31,7 +31,8 @@
       "enum": [
         "TICK",
         "ADVANCE_TIME",
-        "SEND_SIGNAL"
+        "SEND_SIGNAL",
+        "PUBLISH_EVENT"
       ]
     },
     "payload": {
@@ -89,6 +90,26 @@
           "properties": {
             "name": {
               "const": "yard-assignment"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Publish First Bloom's sunlight event through Bloom",
+      "properties": {
+        "kind": {
+          "const": "PUBLISH_EVENT"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "const": "SUNLIGHT_GRANTED"
             }
           }
         }

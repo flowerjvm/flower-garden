@@ -20,6 +20,7 @@
     <properties>
         <java.version>17</java.version>
         <flower.version>0.1.1</flower.version>
+        <bloom.version>0.1.0</bloom.version>
     </properties>
 
     <dependencies>
@@ -31,6 +32,16 @@
             <groupId>io.github.flowerjvm</groupId>
             <artifactId>flower-core</artifactId>
             <version>${flower.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.flowerjvm</groupId>
+            <artifactId>bloom-core</artifactId>
+            <version>${bloom.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.flowerjvm</groupId>
+            <artifactId>bloom-flower-adapter</artifactId>
+            <version>${bloom.version}</version>
         </dependency>
 
         <dependency>

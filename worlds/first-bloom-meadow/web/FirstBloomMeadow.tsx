@@ -1,31 +1,40 @@
 "use client";
 
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import recordedTraceBundle from "../../../contracts/fixtures/first-bloom-the-first-flow.trace.json";
 import {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  type DragEvent,
+} from "react";
+import { projectFirstBloom } from "../../../web/projection/firstBloomProjection";
+import {
+  acceptFirstBloomCumulativeRun,
   createFirstBloomRun,
-  normalizeRunResponse,
+  publishFirstBloomEvent,
   tickFirstBloomRun,
 } from "../../../web/runtime/client";
-import {
-  FIRST_BLOOM_STEPS,
-  projectFirstBloom,
-} from "../../../web/projection/firstBloomProjection";
-import {
-  canRequestFirstBloomTick,
-  evaluateFirstBloomEvidenceAnswer,
-  FIRST_BLOOM_LESSON_BEATS,
-  isFirstBloomLessonCleared,
-  type FirstBloomLessonBeat,
-} from "./learningGame";
 import type {
-  EvidenceItem,
+  FirstBloomProjection,
+  FirstBloomStepId,
   NormalizedRun,
-  RunMode,
-  TickPrediction,
-  TraceEvent,
 } from "../../../web/runtime/types";
+import {
+  checkFirstBloomDraft,
+  createEmptyFirstBloomDraft,
+  createFirstBloomBlueprint,
+  FIRST_BLOOM_PARTS,
+  firstBloomPart,
+  isFirstBloomPartPlaced,
+  moveFirstBloomStep,
+  placeFirstBloomPart,
+  removeFirstBloomPart,
+  type FirstBloomDraft,
+  type FirstBloomPartId,
+} from "./builderGame";
+import styles from "./FirstBloomBuilder.module.css";
 
 const FirstBloomScene = lazy(() =>
   import("./FirstBloomScene").then((module) => ({
@@ -33,204 +42,93 @@ const FirstBloomScene = lazy(() =>
   })),
 );
 
-const PREDICTIONS: Array<{
-  value: TickPrediction;
-  label: string;
-  description: string;
-}> = [
-  {
-    value: "STAY",
-    label: "STAY",
-    description: "현재 Step에 머문다",
-  },
-  {
-    value: "DONE",
-    label: "DONE",
-    description: "현재 Step을 완료한다",
-  },
-];
+type BusyState = "CREATING" | "RUNNING" | "EVENT" | null;
 
-const LEARNING_EVIDENCE_EVENT_TYPES = new Set([
-  "FLOWER.STEP_ENTERED",
-  "FLOWER.STEP_RESULT",
-  "FLOWER.STEP_EXITED",
-  "FLOWER.FLOW_FINISHED",
-  "GARDEN.TICK_COMPLETED",
-]);
-
-const STEP_COPY: Record<
-  string,
-  { eyebrow: string; title: string; description: string }
-> = {
-  "prepare-soil": {
-    eyebrow: "STEP 01",
-    title: "prepare-soil",
-    description: "씨앗을 받을 흙을 고르고 Flow의 첫 작업을 완료합니다.",
-  },
-  "grow-stem": {
-    eyebrow: "STEP 02",
-    title: "grow-stem",
-    description: "다음 Worker tick에서 줄기를 자라게 하는 작은 실행 단위입니다.",
-  },
-  bloom: {
-    eyebrow: "STEP 03",
-    title: "bloom",
-    description: "마지막 꽃을 피우고 Flow를 FINISHED 상태로 보냅니다.",
-  },
+const FAILURE_COPY: Record<string, string> = {
+  SOIL_NOT_READY: "먼저 흙을 준비해야 해요.",
+  SUNLIGHT_NOT_READY: "줄기를 키우기 전에 햇빛 이벤트가 필요해요.",
+  STEM_NOT_GROWN: "꽃을 피우기 전에 줄기를 키워야 해요.",
 };
 
-const BUILT_IN_EVIDENCE: EvidenceItem[] = [
-  {
-    id: "flow-result-contract",
-    kind: "SOURCE",
-    label: "StepResult 전이 구현",
-    description:
-      "DONE은 현재 Step을 나가고 다음 Step 인덱스로 이동합니다. 다음 Step 진입은 다음 tick에서 일어납니다.",
-    path:
-      "../flower/flower-core/src/main/java/io/github/flowerjvm/flower/core/flow/Flow.java",
-    symbol: "applyResult",
-  },
-  {
-    id: "worker-tick-contract",
-    kind: "SOURCE",
-    label: "Worker tick 실행 경계",
-    description:
-      "Worker가 한 번의 tick에서 활성 Flow를 각각 한 번씩 진행합니다.",
-    path:
-      "../flower/flower-core/src/main/java/io/github/flowerjvm/flower/core/worker/Worker.java",
-    symbol: "tickOnce",
-  },
-  {
-    id: "first-flow-test",
-    kind: "TEST",
-    label: "결정적 tick 테스트",
-    description:
-      "ManualClock과 직접 tick으로 scheduler나 sleep 없이 같은 전이를 검증합니다.",
-    path:
-      "runtime/src/test/java/io/github/flowerjvm/garden/runtime/firstbloom/FirstBloomRunCoordinatorTest.java",
-  },
-];
-
-interface PredictionResult {
-  tick: number;
-  stepId?: string;
-  predicted: TickPrediction;
-  actual: "STAY" | "DONE" | "UNKNOWN";
-  correct: boolean;
+function joinClasses(
+  ...classes: Array<string | false | null | undefined>
+): string {
+  return classes.filter(Boolean).join(" ");
 }
 
-interface PendingReview {
-  beat: FirstBloomLessonBeat;
-  events: TraceEvent[];
-  predicted: TickPrediction;
-  actual: PredictionResult["actual"];
-  predictionCorrect: boolean;
-  selectedChoiceId?: string;
-  passed: boolean;
-  feedback?: string;
+function wait(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
-function acceptCumulativeTrace(
-  previous: TraceEvent[],
-  incoming: TraceEvent[],
-  runId: string,
-): TraceEvent[] {
-  if (incoming.length < previous.length) {
-    throw new Error("Runtime trace cannot shrink.");
-  }
-  for (let index = 0; index < incoming.length; index += 1) {
-    if (incoming[index].runId !== runId) {
-      throw new Error("Runtime returned a trace for a different run.");
-    }
-    if (
-      index < previous.length &&
-      JSON.stringify(incoming[index]) !== JSON.stringify(previous[index])
-    ) {
-      throw new Error("An immutable trace prefix changed.");
-    }
-  }
-  return incoming;
+function latestSequence(run: NormalizedRun): number {
+  return run.events.at(-1)?.sequence ?? 0;
 }
 
-function replayInitialCursor(events: TraceEvent[]): number {
-  const firstTick = events.findIndex(
-    (event) => event.type === "GARDEN.TICK_REQUESTED",
-  );
-  return firstTick < 0 ? events.length : firstTick;
-}
-
-function nextReplayCursor(events: TraceEvent[], current: number): number {
-  if (current >= events.length) return events.length;
-
-  for (let index = current; index < events.length; index += 1) {
-    if (events[index].type === "GARDEN.TICK_COMPLETED") return index + 1;
-  }
-  return events.length;
-}
-
-function actualStepResult(events: TraceEvent[]): {
-  value: PredictionResult["actual"];
-  stepId?: string;
-} {
-  const decision = [...events]
-    .reverse()
-    .find((event) => event.type === "FLOWER.STEP_RESULT");
+function stepRunState(
+  stepId: FirstBloomStepId,
+  projection: FirstBloomProjection,
+): "DONE" | "STAY" | "FAIL" | "RUNNING" | null {
+  if (projection.failedStepId === stepId) return "FAIL";
+  if (projection.completedStepIds.includes(stepId)) return "DONE";
   if (
-    decision?.payload.result === "STAY" ||
-    decision?.payload.result === "DONE"
+    projection.lastExecutedStepId === stepId &&
+    projection.lastStepResult === "STAY"
   ) {
-    return { value: decision.payload.result, stepId: decision.stepId };
+    return "STAY";
   }
-  return { value: "UNKNOWN", stepId: decision?.stepId };
+  if (projection.currentStepId === stepId) return "RUNNING";
+  return null;
 }
 
-function formatStep(stepId?: string): string {
-  if (!stepId) return "Flow 대기";
-  return STEP_COPY[stepId]?.title ?? stepId;
+function runtimeStatus(projection: FirstBloomProjection): string {
+  if (projection.phase === "FINISHED") return "완성";
+  if (projection.phase === "FAILED") return "멈춤";
+  if (projection.waitingForBloomEvent) return "이벤트 대기";
+  if (projection.phase === "READY" || projection.phase === "RUNNING") {
+    return "실행 중";
+  }
+  return "조립 중";
 }
 
-function sourceLabel(mode: RunMode | null): string {
-  if (mode === "LIVE_RUNTIME") return "LIVE · 실제 Flower Runtime";
-  if (mode === "RECORDED_REPLAY") return "기록 재생 · 실제 Flower fixture";
-  return "Runtime 연결 전";
+function dropPartId(event: DragEvent): FirstBloomPartId | null {
+  const value = event.dataTransfer.getData("application/x-flower-part");
+  return FIRST_BLOOM_PARTS.some((part) => part.id === value)
+    ? (value as FirstBloomPartId)
+    : null;
 }
 
 export function FirstBloomMeadow() {
-  const recordedRun = useMemo(
-    () => normalizeRunResponse(recordedTraceBundle),
-    [],
+  const [draft, setDraft] = useState<FirstBloomDraft>(
+    createEmptyFirstBloomDraft,
   );
   const [run, setRun] = useState<NormalizedRun | null>(null);
-  const [mode, setMode] = useState<RunMode | null>(null);
-  const [events, setEvents] = useState<TraceEvent[]>([]);
-  const [availableCursor, setAvailableCursor] = useState(0);
-  const [viewCursor, setViewCursor] = useState(0);
-  const [playbackTarget, setPlaybackTarget] = useState(0);
-  const [prediction, setPrediction] = useState<TickPrediction | null>(null);
-  const [predictionResults, setPredictionResults] = useState<
-    PredictionResult[]
-  >([]);
-  const [pendingReview, setPendingReview] = useState<PendingReview | null>(
-    null,
+  const [events, setEvents] = useState<NormalizedRun["events"]>([]);
+  const [busy, setBusy] = useState<BusyState>(null);
+  const [message, setMessage] = useState(
+    "부품을 눌러 Flower를 조립하세요.",
   );
-  const [masteredBeatIds, setMasteredBeatIds] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [selectedStepId, setSelectedStepId] = useState<string | undefined>(
-    "prepare-soil",
-  );
-  const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [cameraResetKey, setCameraResetKey] = useState(0);
+  const [mobileLayout, setMobileLayout] = useState(true);
+  const [mobileCameraEnabled, setMobileCameraEnabled] = useState(false);
 
+  const draftCheck = useMemo(() => checkFirstBloomDraft(draft), [draft]);
   const projection = useMemo(
-    () => projectFirstBloom(events, viewCursor),
-    [events, viewCursor],
+    () => projectFirstBloom(events),
+    [events],
   );
-  const latestProjection = useMemo(
-    () => projectFirstBloom(events, availableCursor),
-    [events, availableCursor],
-  );
-  const isPlaying = viewCursor < playbackTarget;
+  const terminal =
+    projection.phase === "FINISHED" || projection.phase === "FAILED";
+  const missionPassed =
+    projection.phase === "FINISHED" &&
+    projection.gardenState === "BLOOMED";
+  const eventNeeded =
+    projection.waitingForBloomEvent &&
+    !projection.bloomEventPublished &&
+    !terminal;
+  const cameraControlsEnabled =
+    !mobileLayout || mobileCameraEnabled;
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -241,871 +139,666 @@ export function FirstBloomMeadow() {
   }, []);
 
   useEffect(() => {
-    if (viewCursor >= playbackTarget) return;
-    const timeout = window.setTimeout(
-      () => setViewCursor((current) => Math.min(current + 1, playbackTarget)),
-      360,
+    const media = window.matchMedia("(max-width: 820px)");
+    const update = () => {
+      setMobileLayout(media.matches);
+      if (media.matches) setMobileCameraEnabled(false);
+    };
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  function updateDraft(
+    updater: (current: FirstBloomDraft) => FirstBloomDraft,
+    nextMessage: string,
+  ) {
+    if (busy || run) return;
+    setDraft(updater);
+    setMessage(nextMessage);
+    setRuntimeError(null);
+  }
+
+  function addPart(partId: FirstBloomPartId, slot?: number) {
+    const part = firstBloomPart(partId);
+    updateDraft(
+      (current) => placeFirstBloomPart(current, partId, slot),
+      `${part.label} 부품을 놓았습니다.`,
     );
-    return () => window.clearTimeout(timeout);
-  }, [playbackTarget, viewCursor]);
+  }
 
-  function beginReveal(from: number, to: number) {
-    setAvailableCursor(to);
-    if (reducedMotion) {
-      setViewCursor(to);
-      setPlaybackTarget(to);
+  function removePart(partId: FirstBloomPartId) {
+    const part = firstBloomPart(partId);
+    updateDraft(
+      (current) => removeFirstBloomPart(current, partId),
+      `${part.label} 부품을 부품함으로 돌려보냈습니다.`,
+    );
+  }
+
+  function moveStep(fromIndex: number, toIndex: number) {
+    updateDraft(
+      (current) => moveFirstBloomStep(current, fromIndex, toIndex),
+      "Step 순서를 바꿨습니다.",
+    );
+  }
+
+  function beginPartDrag(
+    event: DragEvent<HTMLButtonElement>,
+    partId: FirstBloomPartId,
+  ) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-flower-part", partId);
+  }
+
+  function beginStepDrag(
+    event: DragEvent<HTMLLIElement>,
+    index: number,
+  ) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(
+      "application/x-flower-step-index",
+      String(index),
+    );
+  }
+
+  function dropOnStepSlot(
+    event: DragEvent<HTMLLIElement>,
+    targetIndex: number,
+  ) {
+    event.preventDefault();
+    if (busy || run) return;
+    const rawFromIndex = event.dataTransfer.getData(
+      "application/x-flower-step-index",
+    );
+    const fromIndex = Number(rawFromIndex);
+    if (rawFromIndex !== "" && Number.isInteger(fromIndex)) {
+      moveStep(fromIndex, targetIndex);
       return;
     }
-    setViewCursor(Math.min(from, to));
-    setPlaybackTarget(to);
-  }
-
-  function activateRecordedReplay(message: string) {
-    const initialCursor = replayInitialCursor(recordedRun.events);
-    setRun(recordedRun);
-    setMode("RECORDED_REPLAY");
-    setEvents(recordedRun.events);
-    setAvailableCursor(initialCursor);
-    setViewCursor(initialCursor);
-    setPlaybackTarget(initialCursor);
-    setPrediction(null);
-    setPredictionResults([]);
-    setPendingReview(null);
-    setMasteredBeatIds([]);
-    setNotice(message);
-  }
-
-  async function startRun() {
-    setBusy(true);
-    setNotice(null);
-    try {
-      const liveRun = await createFirstBloomRun();
-      setRun(liveRun);
-      setMode("LIVE_RUNTIME");
-      setEvents(liveRun.events);
-      setAvailableCursor(liveRun.events.length);
-      setViewCursor(liveRun.events.length);
-      setPlaybackTarget(liveRun.events.length);
-      setPrediction(null);
-      setPredictionResults([]);
-      setPendingReview(null);
-      setMasteredBeatIds([]);
-    } catch {
-      activateRecordedReplay(
-        "Flower Runtime에 연결되지 않아, 실제 런타임에서 미리 기록한 canonical trace를 재생합니다. 아래 조작은 새 결과를 계산하지 않고 기록 cursor만 이동합니다.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function runTick() {
-    const beat = FIRST_BLOOM_LESSON_BEATS[predictionResults.length];
+    const partId = dropPartId(event);
     if (
-      !run ||
-      !prediction ||
-      !beat ||
-      pendingReview ||
-      busy ||
-      isPlaying ||
-      viewCursor !== availableCursor
+      partId === "prepare-soil" ||
+      partId === "wait-for-sunlight" ||
+      partId === "grow-stem" ||
+      partId === "bloom"
     ) {
-      return;
+      addPart(partId, targetIndex);
     }
-    setBusy(true);
-    setNotice(null);
-    const beforeCursor = availableCursor;
+  }
 
-    try {
-      let nextEvents = events;
-      let nextRun = run;
-      let nextCursor = availableCursor;
+  async function driveUntilPlayerInput(
+    initialRun: NormalizedRun,
+  ): Promise<NormalizedRun> {
+    let current = initialRun;
+    const pause = reducedMotion ? 40 : 520;
 
-      if (mode === "LIVE_RUNTIME") {
-        const expectedSequence = events.at(-1)?.sequence ?? 0;
-        const response = await tickFirstBloomRun(
-          run.runId,
-          expectedSequence,
-        );
-        if (response.runId !== run.runId) {
-          throw new Error("Runtime returned a different run.");
-        }
-        nextEvents = acceptCumulativeTrace(
-          events,
-          response.events,
-          run.runId,
-        );
-        nextCursor = nextEvents.length;
-        nextRun = response;
-        setRun(nextRun);
-        setEvents(nextEvents);
-      } else {
-        nextCursor = nextReplayCursor(events, availableCursor);
+    for (let tick = 0; tick < 10; tick += 1) {
+      const before = projectFirstBloom(current.events);
+      if (before.phase === "FINISHED" || before.phase === "FAILED") {
+        return current;
+      }
+      if (
+        before.waitingForBloomEvent &&
+        !before.bloomEventPublished
+      ) {
+        return current;
       }
 
-      const revealed = nextEvents.slice(beforeCursor, nextCursor);
-      const actual = actualStepResult(revealed);
-      if (actual.stepId) setSelectedStepId(actual.stepId);
-      setPredictionResults((history) => [
-        ...history,
-        {
-          tick: history.length + 1,
-          stepId: actual.stepId,
-          predicted: prediction,
-          actual: actual.value,
-          correct: prediction === actual.value,
-        },
-      ]);
-      setPendingReview({
-        beat,
-        events: revealed,
-        predicted: prediction,
-        actual: actual.value,
-        predictionCorrect: prediction === actual.value,
-        passed: false,
-      });
-      setEvidenceOpen(false);
-      setPrediction(null);
-      beginReveal(beforeCursor, nextCursor);
-    } catch {
-      setNotice(
-        "실시간 실행이 중단되었습니다. 결과를 추측하지 않았습니다. 새 실행을 시작하면 canonical 기록 재생으로 안전하게 전환할 수 있습니다.",
+      await wait(pause);
+      const incoming = await tickFirstBloomRun(
+        current.runId,
+        latestSequence(current),
+      );
+      const next = acceptFirstBloomCumulativeRun(current, incoming);
+      setRun(next);
+      setEvents(next.events);
+      current = next;
+
+      const after = projectFirstBloom(next.events);
+      if (
+        after.phase === "FINISHED" ||
+        after.phase === "FAILED" ||
+        (after.waitingForBloomEvent &&
+          !after.bloomEventPublished)
+      ) {
+        return next;
+      }
+    }
+
+    throw new Error("Flower Flow가 안전 실행 한도를 넘었습니다.");
+  }
+
+  async function runDraft() {
+    if (!draftCheck.ready || busy || run) return;
+    setBusy("CREATING");
+    setRuntimeError(null);
+    setMessage("실제 Flower Runtime에 Flow를 만들고 있습니다.");
+
+    try {
+      const created = acceptFirstBloomCumulativeRun(
+        null,
+        await createFirstBloomRun(
+          createFirstBloomBlueprint(draft),
+        ),
+      );
+      setRun(created);
+      setEvents(created.events);
+      setBusy("RUNNING");
+      setMessage("Worker가 조립한 Step을 순서대로 실행합니다.");
+      const result = await driveUntilPlayerInput(created);
+      const finalProjection = projectFirstBloom(result.events);
+      if (
+        finalProjection.waitingForBloomEvent &&
+        !finalProjection.bloomEventPublished
+      ) {
+        setMessage("Flow가 햇빛 이벤트를 기다리고 있습니다.");
+      } else if (finalProjection.phase === "FAILED") {
+        setMessage("Step 순서를 고쳐서 다시 실행해 보세요.");
+      } else if (finalProjection.phase === "FINISHED") {
+        setMessage("꽃이 피었습니다!");
+      }
+    } catch (error) {
+      setRuntimeError(
+        error instanceof Error
+          ? error.message
+          : "Flower Runtime에 연결하지 못했습니다.",
+      );
+      setRun(null);
+      setEvents([]);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function sendSunlightEvent() {
+    if (!run || !eventNeeded || busy) return;
+    setBusy("EVENT");
+    setRuntimeError(null);
+    setMessage("햇빛 이벤트를 보내는 중입니다.");
+
+    try {
+      const published = acceptFirstBloomCumulativeRun(
+        run,
+        await publishFirstBloomEvent(
+          run.runId,
+          latestSequence(run),
+        ),
+      );
+      setRun(published);
+      setEvents(published.events);
+      await wait(reducedMotion ? 40 : 420);
+      setBusy("RUNNING");
+      const result = await driveUntilPlayerInput(published);
+      const finalProjection = projectFirstBloom(result.events);
+      setMessage(
+        finalProjection.phase === "FINISHED"
+          ? "꽃이 피었습니다!"
+          : finalProjection.phase === "FAILED"
+            ? "Step 순서를 고쳐서 다시 실행해 보세요."
+            : "Worker가 이벤트를 확인했습니다.",
+      );
+    } catch (error) {
+      setRuntimeError(
+        error instanceof Error
+          ? error.message
+          : "Bloom 이벤트를 보내지 못했습니다.",
       );
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
-  function answerEvidenceQuestion(choiceId: string) {
-    if (!pendingReview || pendingReview.passed || isPlaying) return;
-
-    const result = evaluateFirstBloomEvidenceAnswer(
-      pendingReview.beat,
-      choiceId,
-      pendingReview.events,
-    );
-    setPendingReview((current) =>
-      current
-        ? {
-            ...current,
-            selectedChoiceId: choiceId,
-            passed: result.correct,
-            feedback: result.message,
-          }
-        : current,
-    );
-
-    if (result.correct) {
-      setMasteredBeatIds((current) =>
-        current.includes(pendingReview.beat.id)
-          ? current
-          : [...current, pendingReview.beat.id],
-      );
-    }
-  }
-
-  function continueAfterReview() {
-    if (!pendingReview?.passed) return;
-    setPendingReview(null);
-  }
-
-  function resetRun() {
+  function editAgain() {
+    if (busy) return;
     setRun(null);
-    setMode(null);
     setEvents([]);
-    setAvailableCursor(0);
-    setViewCursor(0);
-    setPlaybackTarget(0);
-    setPrediction(null);
-    setPredictionResults([]);
-    setPendingReview(null);
-    setMasteredBeatIds([]);
-    setNotice(null);
-    setSelectedStepId("prepare-soil");
+    setRuntimeError(null);
+    setMessage("같은 부품을 다시 배열해 보세요.");
   }
 
-  function scrubTo(cursor: number) {
-    setViewCursor(cursor);
-    setPlaybackTarget(cursor);
+  function resetAll() {
+    if (busy) return;
+    setDraft(createEmptyFirstBloomDraft());
+    setRun(null);
+    setEvents([]);
+    setRuntimeError(null);
+    setMessage("부품을 눌러 Flower를 조립하세요.");
   }
 
-  const selectedStep =
-    selectedStepId && STEP_COPY[selectedStepId]
-      ? STEP_COPY[selectedStepId]
-      : STEP_COPY["prepare-soil"];
-  const activeEvent = projection.activeEvent;
-  const combinedEvidence = [
-    ...(activeEvent?.evidence ?? []),
-    ...(run?.evidence ?? []),
-    ...BUILT_IN_EVIDENCE,
-  ].filter(
-    (item, index, items) =>
-      items.findIndex((candidate) => candidate.id === item.id) === index,
-  );
-  const visibleEvents = events.slice(0, availableCursor);
-  const activeBeat = FIRST_BLOOM_LESSON_BEATS[predictionResults.length];
-  const lessonCleared = isFirstBloomLessonCleared(
-    latestProjection.phase,
-    masteredBeatIds,
-  );
-  const lessonStateLabel = pendingReview?.passed
-    ? "CHECK PASSED"
-    : pendingReview
-      ? "EVIDENCE CHECK"
-      : lessonCleared
-        ? "CLEARED"
-        : run
-          ? "IN PROGRESS"
-          : "NOT STARTED";
-  const reviewEventSequences = new Set(
-    pendingReview?.events.map((event) => event.sequence) ?? [],
-  );
-  const canTick = canRequestFirstBloomTick({
-    hasRun: Boolean(run),
-    hasPrediction: Boolean(prediction),
-    reviewPending: Boolean(pendingReview),
-    busy,
-    isPlaying,
-    atLatestCursor: viewCursor === availableCursor,
-    runtimePhase: latestProjection.phase,
-    completedTickCount: predictionResults.length,
-  });
+  const failureMessage =
+    (projection.failureCode &&
+      FAILURE_COPY[projection.failureCode]) ||
+    projection.failureMessage ||
+    "이 Step이 필요한 준비를 찾지 못했습니다.";
 
   return (
-    <main className="flower-garden-shell">
-      <header className="garden-header">
-        <Link
-          className="brand-lockup"
-          href="/"
-          aria-label="Flower Garden 월드 선택"
-        >
-          <div className="brand-mark" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-          <div>
-            <p className="brand-name">Flower Garden</p>
-            <p className="brand-tagline">Flower를 실행하며 배우는 마이크로월드</p>
-          </div>
+    <main className={styles.shell}>
+      <header className={styles.header}>
+        <Link className={styles.brand} href="/" aria-label="월드 선택으로">
+          <span className={styles.brandMark} aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+          <span>
+            <strong>Flower Garden</strong>
+            <small>WORLD 01</small>
+          </span>
         </Link>
-        <div
-          className={`runtime-badge ${
-            mode === "LIVE_RUNTIME"
-              ? "is-live"
-              : mode === "RECORDED_REPLAY"
-                ? "is-replay"
-                : ""
-          }`}
-          role="status"
-        >
-          <span className="runtime-dot" aria-hidden="true" />
-          <span>{sourceLabel(mode)}</span>
-          {run && <small>{run.runtimeVersion}</small>}
+        <div className={styles.missionTitle}>
+          <span>MISSION</span>
+          <h1>꽃 한 송이 피우기</h1>
         </div>
+        <span
+          className={joinClasses(
+            styles.runtimeBadge,
+            run && styles.live,
+          )}
+        >
+          <i aria-hidden="true" />
+          {run ? "LIVE FLOWER" : "BUILD"}
+        </span>
       </header>
 
-      <nav className="world-crumbs" aria-label="현재 학습 위치">
-        <span>01</span>
-        <strong>First Bloom Meadow</strong>
-        <i aria-hidden="true">/</i>
-        <span>The First Flow</span>
-      </nav>
-
-      <section className="concept-ribbon" aria-label="Flower 실행 계층">
-        {[
-          ["Engine", "정원을 깨우는 실행기"],
-          ["Worker", "tick을 운반하는 일꾼"],
-          ["Flow", "하나의 꽃 피우기"],
-          ["Step", formatStep(projection.currentStepId)],
-          ["StepResult", projection.lastStepResult ?? "아직 없음"],
-        ].map(([term, description], index) => (
-          <div
-            key={term}
-            className={`concept-node ${
-              run && index <= Math.min(4, projection.flowerStage + 1)
-                ? "is-active"
-                : ""
-            }`}
-          >
-            <span>{term}</span>
-            <small>{description}</small>
-          </div>
-        ))}
-      </section>
-
-      {notice && (
-        <div
-          className={`source-notice ${
-            mode === "RECORDED_REPLAY" ? "is-replay" : "is-error"
-          }`}
-          role="status"
+      <div className={styles.playfield}>
+        <section
+          className={joinClasses(
+            styles.worldStage,
+            cameraControlsEnabled && styles.cameraActive,
+          )}
+          aria-label="실제 Flower 실행의 3D 정원"
         >
-          <strong>
-            {mode === "RECORDED_REPLAY" ? "기록 재생 모드" : "실행 연결 안내"}
-          </strong>
-          <span>{notice}</span>
-        </div>
-      )}
-
-      <section className="garden-workspace">
-        <aside className="mission-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">MISSION 01</p>
-              <h1>The First Flow</h1>
-            </div>
-            <span className="difficulty-pill">첫 꽃</span>
+          <div className={styles.missionChip}>
+            <span>목표</span>
+            <strong>Step을 연결해 꽃을 피우세요.</strong>
           </div>
 
-          <p className="mission-intro">
-            당신은 Flow를 마음대로 움직이는 조종사가 아닙니다. 실제 Flower
-            Runtime에 Worker tick을 한 번씩 요청하고, 그 결과가 왜 나왔는지
-            Trace로 증명하는 관찰자입니다.
-          </p>
-
-          <div className="first-bloom-role-card">
-            <span>당신의 역할</span>
-            <strong>Worker Tick 관찰자</strong>
-            <p>
-              예측은 결과를 바꾸지 않습니다. Flower가 실행한 뒤 근거 문제를
-              풀어야 다음 tick이 열립니다.
-            </p>
-          </div>
-
-          <div className="mission-goal">
-            <span aria-hidden="true">✦</span>
-            <p>
-              <strong>목표</strong>
-              네 번의 실제 tick을 관찰하고 Engine → Worker → Flow → Step →
-              StepResult 계약을 4/4로 설명하기
-            </p>
-          </div>
-
-          <div
-            className="first-bloom-progress"
-            role="status"
-            aria-label={`학습 진행 ${masteredBeatIds.length} / ${FIRST_BLOOM_LESSON_BEATS.length}`}
-          >
-            <div>
-              <span>RUNTIME</span>
-              <strong>{latestProjection.phase}</strong>
-            </div>
-            <div>
-              <span>LESSON</span>
+          <div className={styles.runtimeHud}>
+            <span>
+              FLOW
+              <strong>{runtimeStatus(projection)}</strong>
+            </span>
+            <span>
+              STEP
               <strong>
-                {masteredBeatIds.length}/{FIRST_BLOOM_LESSON_BEATS.length}
+                {projection.lastExecutedStepId ??
+                  projection.currentStepId ??
+                  "—"}
               </strong>
-              <small>{lessonStateLabel}</small>
-            </div>
-            <ol aria-hidden="true">
-              {FIRST_BLOOM_LESSON_BEATS.map((beat) => (
-                <li
-                  key={beat.id}
-                  className={
-                    masteredBeatIds.includes(beat.id) ? "is-mastered" : ""
-                  }
-                />
-              ))}
-            </ol>
+            </span>
+            <span>
+              RESULT
+              <strong>{projection.lastStepResult ?? "—"}</strong>
+            </span>
           </div>
 
-          {run && !isPlaying && viewCursor !== availableCursor && (
-            <div className="prediction-result is-learning" role="status">
-              <span aria-hidden="true">↶</span>
-              <div>
-                <strong>과거 Trace 관찰 중</strong>
-                <p>
-                  과거 이벤트를 보는 동안에는 새 Worker tick을 실행하지
-                  않습니다. 최신 Runtime 위치로 돌아오면 다음 조작이
-                  열립니다.
-                </p>
-                <button
-                  type="button"
-                  className="secondary-action"
-                  onClick={() => scrubTo(availableCursor)}
-                >
-                  최신 Trace로 돌아가기
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!run ? (
-            <div className="start-card">
-              <p>
-                시작하면 실제 Engine에 하나의 Flow가 만들어지고 Worker의
-                READY 대기열에 들어갑니다. 이후에는 매번 예측 → 실제 tick →
-                근거 확인 순서로 진행합니다.
-              </p>
-              <button
-                className="primary-action"
-                type="button"
-                onClick={startRun}
-                disabled={busy}
-              >
-                {busy ? "Runtime을 깨우는 중…" : "관찰 미션 시작"}
-              </button>
-            </div>
-          ) : pendingReview ? (
-            <div className="first-bloom-review">
-              <div className="prediction-heading">
-                <p className="eyebrow">
-                  TICK {pendingReview.beat.tick} · TRACE CHECK
-                </p>
-                <span>{pendingReview.beat.focus}</span>
-              </div>
-              <h2>{pendingReview.beat.reviewTitle}</h2>
-              <div
-                className={`first-bloom-runtime-result ${
-                  pendingReview.predictionCorrect ? "is-match" : "is-miss"
-                }`}
-              >
-                <span>예측 {pendingReview.predicted}</span>
-                <strong>실제 {pendingReview.actual}</strong>
-              </div>
-              <p>{pendingReview.beat.evidenceQuestion}</p>
-
-              {isPlaying && (
-                <div className="first-bloom-observing" role="status">
-                  <span aria-hidden="true">●</span>
-                  3D 세계가 실제 Trace를 재생하고 있습니다…
-                </div>
-              )}
-
-              {!isPlaying && (
-                <div
-                  className="first-bloom-review-trace"
-                  aria-label={`Tick ${pendingReview.beat.tick} 핵심 Trace`}
-                >
-                  <span>ACTUAL TRACE</span>
-                  {pendingReview.events
-                    .filter((event) =>
-                      LEARNING_EVIDENCE_EVENT_TYPES.has(event.type),
-                    )
-                    .map((event) => (
-                      <code key={event.eventId}>
-                        {event.type}
-                        {event.stepId ? ` · ${event.stepId}` : ""}
-                        {typeof event.payload.result === "string"
-                          ? ` → ${event.payload.result}`
-                          : ""}
-                      </code>
-                    ))}
-                </div>
-              )}
-
-              <div className="first-bloom-evidence-options">
-                {pendingReview.beat.evidenceChoices.map((choice) => {
-                  const selected =
-                    pendingReview.selectedChoiceId === choice.id;
-                  const answerClass = selected
-                    ? pendingReview.passed
-                      ? "is-correct"
-                      : pendingReview.feedback
-                        ? "is-wrong"
-                        : "is-selected"
-                    : "";
-                  return (
-                    <button
-                      key={choice.id}
-                      type="button"
-                      className={answerClass}
-                      onClick={() => answerEvidenceQuestion(choice.id)}
-                      disabled={isPlaying || pendingReview.passed}
-                      aria-pressed={selected}
-                    >
-                      <span aria-hidden="true">
-                        {selected && pendingReview.passed
-                          ? "✓"
-                          : selected && pendingReview.feedback
-                            ? "↻"
-                            : "○"}
-                      </span>
-                      {choice.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {pendingReview.feedback && (
-                <div
-                  className={`first-bloom-review-feedback ${
-                    pendingReview.passed ? "is-correct" : "is-wrong"
-                  }`}
-                  role={pendingReview.passed ? "status" : "alert"}
-                >
-                  <strong>
-                    {pendingReview.passed
-                      ? "계약을 이해했습니다"
-                      : "아직 근거가 다릅니다"}
-                  </strong>
-                  <p>{pendingReview.feedback}</p>
-                </div>
-              )}
-
-              {pendingReview.passed && (
-                <button
-                  type="button"
-                  className="primary-action first-bloom-continue"
-                  onClick={continueAfterReview}
-                >
-                  {pendingReview.beat.tick ===
-                  FIRST_BLOOM_LESSON_BEATS.length
-                    ? "학습 결과 확인"
-                    : `TICK ${pendingReview.beat.tick + 1} 준비`}
-                </button>
-              )}
-            </div>
-          ) : lessonCleared ? (
-            <div className="completion-card">
-              <p className="eyebrow">LESSON CLEARED · RUNTIME FINISHED</p>
-              <h2>첫 Flow를 설명할 수 있게 되었습니다.</h2>
-              <p>
-                네 계약을 모두 Trace로 확인했습니다. 3D 꽃이 아니라 실제
-                StepResult와 FLOWER.FLOW_FINISHED가 완료를 증명합니다.
-              </p>
-              <div className="first-bloom-contract-summary">
-                {FIRST_BLOOM_LESSON_BEATS.map((beat) => (
-                  <span key={beat.id}>
-                    <i aria-hidden="true">✓</i>
-                    {beat.focus}
-                  </span>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="secondary-action"
-                onClick={resetRun}
-              >
-                새 실행 시작
-              </button>
-            </div>
-          ) : latestProjection.phase === "FINISHED" ? (
-            <div className="completion-card first-bloom-incomplete">
-              <p className="eyebrow">RUNTIME FINISHED · LESSON NOT CLEARED</p>
-              <h2>Flow는 끝났지만 학습 확인이 남았습니다.</h2>
-              <p>
-                Runtime 완료와 학습 완료는 다릅니다. 새 실행에서 각 tick의
-                근거 문제를 통과해 4/4 계약을 확인하세요.
-              </p>
-              <button
-                type="button"
-                className="secondary-action"
-                onClick={resetRun}
-              >
-                학습 다시 시작
-              </button>
-            </div>
-          ) : activeBeat ? (
-            <>
-              <div className="prediction-block">
-                <div className="prediction-heading">
-                  <p className="eyebrow">
-                    TICK {activeBeat.tick} · 실행 전
-                  </p>
-                  <span>{activeBeat.focus}</span>
-                </div>
-                <h2>{activeBeat.predictionPrompt}</h2>
-                <p className="first-bloom-prediction-context">
-                  {activeBeat.predictionContext}
-                </p>
-                <div className="prediction-options">
-                  {PREDICTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={
-                        prediction === option.value ? "is-selected" : ""
-                      }
-                      onClick={() => setPrediction(option.value)}
-                      aria-pressed={prediction === option.value}
-                    >
-                      <strong>{option.label}</strong>
-                      <small>{option.description}</small>
-                    </button>
-                  ))}
-                </div>
-                <p className="prediction-note">
-                  {mode === "RECORDED_REPLAY"
-                    ? "이 선택은 가설입니다. 새 Runtime 명령을 보내지 않고, 실제 실행에서 기록된 다음 Worker tick 구간을 관찰합니다."
-                    : "이 선택은 가설입니다. 정답과 세계 상태는 실제 Runtime Trace가 결정합니다."}
-                </p>
-              </div>
-
-              <button
-                className="tick-action"
-                type="button"
-                onClick={runTick}
-                disabled={!canTick}
-              >
-                <span className="tick-icon" aria-hidden="true">
-                  ↻
-                </span>
-                <span>
-                  <strong>
-                    {busy
-                      ? mode === "RECORDED_REPLAY"
-                        ? "기록 불러오는 중…"
-                        : "Flower 실행 중…"
-                      : mode === "RECORDED_REPLAY"
-                        ? "기록된 Worker tick 관찰"
-                        : "실제 Worker tick 실행"}
-                  </strong>
-                  <small>
-                    {mode === "RECORDED_REPLAY"
-                      ? "canonical Trace의 다음 tick 구간만 재생합니다"
-                      : "완료 뒤 근거 문제를 풀어야 다음 tick이 열립니다"}
-                  </small>
-                </span>
-              </button>
-            </>
-          ) : (
-            <div className="completion-card first-bloom-incomplete">
-              <h2>학습 단계를 불러오지 못했습니다.</h2>
-              <button
-                type="button"
-                className="secondary-action"
-                onClick={resetRun}
-              >
-                새 실행 시작
-              </button>
-            </div>
-          )}
-        </aside>
-
-        <section className="world-stage" aria-label="First Bloom Meadow 3D 투영">
           <Suspense
             fallback={
-              <div className="world-loading" role="status">
-                <span aria-hidden="true" />
-                <p>정원을 불러오는 중…</p>
-              </div>
+              <div className={styles.sceneLoading}>정원을 여는 중…</div>
             }
           >
             <FirstBloomScene
               projection={projection}
               reducedMotion={reducedMotion}
-              selectedStepId={selectedStepId}
-              onSelectStep={setSelectedStepId}
+              cameraResetKey={cameraResetKey}
+              cameraControlsEnabled={cameraControlsEnabled}
             />
           </Suspense>
 
-          <div className="stage-overlay stage-status">
-            <span
-              className={`status-light phase-${projection.phase.toLowerCase()}`}
-              aria-hidden="true"
-            />
-            <div>
-              <small>FLOW STATE</small>
-              <strong>{projection.phase}</strong>
-            </div>
-            <i />
-            <div>
-              <small>현재 STEP</small>
-              <strong>{formatStep(projection.currentStepId)}</strong>
-            </div>
-          </div>
-
-          <div
-            className={`stage-overlay source-stamp ${
-              mode === "RECORDED_REPLAY" ? "is-replay" : ""
-            }`}
-          >
-            {sourceLabel(mode)}
-          </div>
-
-          <div className="stage-overlay step-inspector">
-            <p>{selectedStep.eyebrow}</p>
-            <strong>{selectedStep.title}</strong>
-            <span>{selectedStep.description}</span>
-          </div>
-
-          <div className="accessible-world-state">
-            <h2>3D 정원 상태</h2>
-            <p>
-              Flow 상태 {projection.phase}. 현재 Step{" "}
-              {formatStep(projection.currentStepId)}. 흙, 줄기, 꽃 가운데{" "}
-              {projection.flowerStage}단계가 완료되었습니다.
-            </p>
-            <div>
-              {FIRST_BLOOM_STEPS.map((stepId) => (
-                <button
-                  key={stepId}
-                  type="button"
-                  onClick={() => setSelectedStepId(stepId)}
-                >
-                  {formatStep(stepId)} 살펴보기
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <aside className="trace-panel">
-          <div className="panel-heading compact">
-            <div>
-              <p className="eyebrow">RUNTIME TRACE</p>
-              <h2>진실의 기록</h2>
-            </div>
+          <div className={styles.cameraTools}>
+            <span>
+              {mobileLayout
+                ? mobileCameraEnabled
+                  ? "한 손가락 회전 · 두 손가락 줌"
+                  : "화면을 밀어 아래로 스크롤"
+                : "드래그 회전 · 휠 줌 · 우클릭 이동"}
+            </span>
             <button
               type="button"
-              className="evidence-toggle"
-              onClick={() => setEvidenceOpen((open) => !open)}
-              aria-expanded={evidenceOpen}
+              className={styles.cameraToggle}
+              onClick={() =>
+                setMobileCameraEnabled((enabled) => !enabled)
+              }
+              aria-pressed={mobileCameraEnabled}
             >
-              {evidenceOpen ? "Trace 보기" : "근거 보기"}
+              {mobileCameraEnabled ? "스크롤 모드" : "둘러보기"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCameraResetKey((value) => value + 1)}
+            >
+              전체 보기
             </button>
           </div>
 
-          {evidenceOpen ? (
-            <div className="evidence-list">
-              <p className="panel-copy">
-                결과를 뒷받침하는 계약, 실제 소스, 테스트 위치입니다.
-              </p>
-              {combinedEvidence.map((item) => (
-                <article key={item.id} className="evidence-card">
-                  <span>{item.kind}</span>
-                  <h3>{item.label}</h3>
-                  {item.description && <p>{item.description}</p>}
-                  {(item.path || item.url) && (
-                    <code>{item.path ?? item.url}</code>
-                  )}
-                  {item.symbol && <small>symbol · {item.symbol}</small>}
-                </article>
-              ))}
+          {eventNeeded && (
+            <div className={styles.eventGate}>
+              <span aria-hidden="true">☀</span>
+              <div>
+                <small>SUNLIGHT_GRANTED</small>
+                <strong>햇빛을 기다리고 있어요</strong>
+              </div>
+              <button
+                type="button"
+                onClick={sendSunlightEvent}
+                disabled={busy !== null}
+                aria-label="☀ 햇빛 보내기 · SUNLIGHT_GRANTED 이벤트 보내기"
+              >
+                ☀ 햇빛 보내기
+              </button>
             </div>
-          ) : (
-            <>
-              {pendingReview && (
-                <div className="first-bloom-trace-callout">
-                  <strong>TICK {pendingReview.beat.tick} 근거</strong>
-                  <span>
-                    빛나는 이벤트가 방금 실제 Worker tick에서 추가된
-                    기록입니다.
-                  </span>
-                </div>
-              )}
-              <ol className="trace-list">
-                {visibleEvents.length === 0 && (
-                  <li className="trace-empty">
-                    실행을 만들면 FlowerListener의 첫 기록이 여기에
-                    나타납니다.
-                  </li>
-                )}
-                {visibleEvents.map((event, index) => {
-                  const active = index + 1 === viewCursor;
-                  const lessonEvidence = reviewEventSequences.has(
-                    event.sequence,
-                  );
-                  const eventClassName = [
-                    active ? "is-active" : "",
-                    lessonEvidence ? "is-lesson-evidence" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ");
-                  return (
-                    <li
-                      key={`${event.sequence}-${event.type}`}
-                      className={eventClassName}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => scrubTo(index + 1)}
-                        aria-label={`${event.sequence}번 이벤트로 이동: ${event.summary}`}
-                      >
-                        <span className="trace-sequence">
-                          {String(event.sequence).padStart(2, "0")}
-                        </span>
-                        <span className="trace-body">
-                          <small>
-                            {event.source.replaceAll("_", " ")} ·{" "}
-                            {(event.logicalTimeMillis / 1000).toFixed(1)}s
-                          </small>
-                          <strong>{event.type}</strong>
-                          <p>{event.summary}</p>
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            </>
           )}
-        </aside>
-      </section>
 
-      <section className="trace-transport" aria-label="Trace 재생 제어">
-        <button
-          type="button"
-          onClick={() => scrubTo(Math.max(0, viewCursor - 1))}
-          disabled={viewCursor === 0}
-          aria-label="이전 이벤트"
-        >
-          ←
-        </button>
-        <div className="trace-scrubber">
-          <div>
-            <span>TRACE REPLAY</span>
+          {terminal && (
+            <div
+              className={joinClasses(
+                styles.outcome,
+                missionPassed ? styles.success : styles.failure,
+              )}
+              role="status"
+            >
+              <span aria-hidden="true">
+                {missionPassed ? "✿" : "!"}
+              </span>
+              <div>
+                <strong>
+                  {missionPassed
+                    ? "완성! 꽃이 피었습니다."
+                    : `${projection.failedStepId ?? "Step"}에서 멈췄어요.`}
+                </strong>
+                <p>
+                  {missionPassed
+                    ? "조립한 순서대로 실제 Flower Flow가 실행됐습니다."
+                    : failureMessage}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <p className={styles.srOnly}>
+            Flow {projection.phase}. 정원 {projection.gardenState}. 현재 Step{" "}
+            {projection.currentStepId ?? "없음"}. 결과{" "}
+            {projection.lastStepResult ?? "없음"}.
+          </p>
+        </section>
+
+        <aside className={styles.builder} aria-label="Flower 조립판">
+          <div className={styles.builderHeading}>
+            <div>
+              <span>FLOW BUILDER</span>
+              <h2>조립판</h2>
+            </div>
             <strong>
-              {viewCursor} / {availableCursor}
+              {draftCheck.placedCount}/{draftCheck.totalCount}
             </strong>
           </div>
-          <input
-            type="range"
-            min={0}
-            max={Math.max(availableCursor, 1)}
-            value={Math.min(viewCursor, Math.max(availableCursor, 1))}
-            onChange={(event) => scrubTo(Number(event.target.value))}
-            aria-label="Trace 이벤트 위치"
-            aria-valuetext={`${viewCursor}번째 이벤트`}
-            disabled={availableCursor === 0}
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() =>
-            scrubTo(Math.min(availableCursor, viewCursor + 1))
-          }
-          disabled={viewCursor >= availableCursor}
-          aria-label="다음 이벤트"
-        >
-          →
-        </button>
-        <div className="active-event-summary">
-          <span>SEQ {activeEvent?.sequence ?? "—"}</span>
-          <p>{activeEvent?.summary ?? "아직 기록된 이벤트가 없습니다."}</p>
-        </div>
-      </section>
 
-      <section className="world-catalog" aria-labelledby="world-catalog-title">
-        <div className="catalog-heading">
-          <p className="eyebrow">GARDEN MAP</p>
-          <h2 id="world-catalog-title">다음에 피울 세계</h2>
-        </div>
-        <article className="world-card is-current">
-          <span className="world-number">01</span>
-          <div>
-            <small>현재 월드</small>
-            <h3>First Bloom Meadow</h3>
-            <p>The First Flow · 기본 실행 계층</p>
+          <section className={styles.palette} aria-labelledby="parts-title">
+            <h3 id="parts-title">부품</h3>
+            <div>
+              {FIRST_BLOOM_PARTS.map((part) => {
+                const placed = isFirstBloomPartPlaced(draft, part.id);
+                return (
+                  <button
+                    key={part.id}
+                    type="button"
+                    draggable={!placed && !run && !busy}
+                    data-color={part.color}
+                    disabled={placed || Boolean(run) || Boolean(busy)}
+                    onDragStart={(event) =>
+                      beginPartDrag(event, part.id)
+                    }
+                    onClick={() => addPart(part.id)}
+                    aria-label={`${part.label} ${
+                      placed ? "배치됨" : "추가"
+                    }`}
+                  >
+                    <span aria-hidden="true">{part.icon}</span>
+                    <span>
+                      <strong>{part.label}</strong>
+                    </span>
+                    <b aria-hidden="true">{placed ? "✓" : "+"}</b>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className={styles.machine} aria-label="Flower 실행 구조">
+            <div className={styles.fixedNode}>
+              <span aria-hidden="true">◉</span>
+              <p>
+                <small>RUNTIME</small>
+                <strong>Engine</strong>
+              </p>
+            </div>
+            <i className={styles.wire} aria-hidden="true" />
+            <div
+              className={joinClasses(
+                styles.socketNode,
+                draft.workerPlaced && styles.filled,
+              )}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (dropPartId(event) === "worker") addPart("worker");
+              }}
+            >
+              {draft.workerPlaced ? (
+                <>
+                  <span aria-hidden="true">⚙</span>
+                  <p>
+                    <small>EXECUTOR</small>
+                    <strong>Worker</strong>
+                  </p>
+                  {!run && (
+                    <button
+                      type="button"
+                      onClick={() => removePart("worker")}
+                      aria-label="Worker 제거"
+                    >
+                      ×
+                    </button>
+                  )}
+                </>
+              ) : (
+                <span>Worker 놓기</span>
+              )}
+            </div>
+            <i className={styles.wire} aria-hidden="true" />
+            <div
+              className={joinClasses(
+                styles.socketNode,
+                draft.flowPlaced && styles.filled,
+              )}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (dropPartId(event) === "flow") addPart("flow");
+              }}
+            >
+              {draft.flowPlaced ? (
+                <>
+                  <span aria-hidden="true">◆</span>
+                  <p>
+                    <small>WORKFLOW</small>
+                    <strong>Flow</strong>
+                  </p>
+                  {!run && (
+                    <button
+                      type="button"
+                      onClick={() => removePart("flow")}
+                      aria-label="Flow 제거"
+                    >
+                      ×
+                    </button>
+                  )}
+                </>
+              ) : (
+                <span>Flow 놓기</span>
+              )}
+            </div>
+          </section>
+
+          <section className={styles.flowLane} aria-labelledby="flow-title">
+            <div className={styles.flowLaneTitle}>
+              <h3 id="flow-title">MY FLOW</h3>
+              <span>위에서 아래로 실행</span>
+            </div>
+            <ol>
+              {draft.stepSlots.map((stepId, index) => {
+                const part = stepId ? firstBloomPart(stepId) : null;
+                const state = stepId
+                  ? stepRunState(stepId, projection)
+                  : null;
+
+                return (
+                  <li
+                    key={index}
+                    className={joinClasses(
+                      styles.stepSlot,
+                      part && styles.hasStep,
+                      state && styles[`state${state}`],
+                    )}
+                    draggable={Boolean(part) && !run && !busy}
+                    onDragStart={(event) =>
+                      beginStepDrag(event, index)
+                    }
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => dropOnStepSlot(event, index)}
+                  >
+                    <span className={styles.slotNumber}>
+                      {index + 1}
+                    </span>
+                    {part && stepId ? (
+                      <>
+                        <span
+                          className={styles.stepIcon}
+                          data-color={part.color}
+                          aria-hidden="true"
+                        >
+                          {part.icon}
+                        </span>
+                        <p>
+                          <strong>{part.label}</strong>
+                          <small>{part.runtimeLabel}</small>
+                        </p>
+                        {state && (
+                          <b className={styles.stepState}>{state}</b>
+                        )}
+                        {!run && (
+                          <span className={styles.stepActions}>
+                            <button
+                              type="button"
+                              onClick={() => moveStep(index, index - 1)}
+                              disabled={index === 0}
+                              aria-label={`${part.label} 위로`}
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveStep(index, index + 1)}
+                              disabled={
+                                index === draft.stepSlots.length - 1
+                              }
+                              aria-label={`${part.label} 아래로`}
+                            >
+                              ↓
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removePart(stepId)}
+                              aria-label={`${part.label} 제거`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className={styles.emptySlot}>
+                        Step을 여기에 놓으세요
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+
+          <div className={styles.builderMessage} aria-live="polite">
+            <span aria-hidden="true">
+              {runtimeError ? "!" : terminal ? "●" : "·"}
+            </span>
+            <p>{runtimeError ?? message}</p>
           </div>
-          <span className="world-status">PLAYING</span>
-        </article>
-        <Link
-          className="world-card is-next is-available"
-          href="/worlds/verdant-signal-garden"
-          aria-label="두 번째 월드 Verdant Signal Garden 열기"
-        >
-          <span className="world-number">02</span>
-          <div>
-            <small>두 번째 월드</small>
-            <h3>Verdant Signal Garden</h3>
-            <p>Signal vs Timeout · 시간과 경쟁</p>
+
+          <div className={styles.runToolbar}>
+            <button
+              type="button"
+              className={styles.resetButton}
+              onClick={resetAll}
+              disabled={busy !== null}
+            >
+              초기화
+            </button>
+            {eventNeeded ? (
+              <button
+                type="button"
+                className={styles.runButton}
+                onClick={sendSunlightEvent}
+                disabled={busy !== null}
+                aria-label="☀ 햇빛 보내기 · SUNLIGHT_GRANTED 이벤트 보내기"
+              >
+                {busy === "EVENT"
+                  ? "햇빛 보내는 중…"
+                  : "☀ 햇빛 보내기"}
+              </button>
+            ) : run ? (
+              <button
+                type="button"
+                className={styles.runButton}
+                onClick={editAgain}
+                disabled={busy !== null || (!terminal && !runtimeError)}
+              >
+                {busy
+                  ? "실행 중…"
+                  : runtimeError
+                    ? "다시 조립"
+                    : "고쳐보기"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={styles.runButton}
+                onClick={runDraft}
+                disabled={!draftCheck.ready || busy !== null}
+              >
+                {busy
+                  ? "Flower 실행 중…"
+                  : draftCheck.ready
+                    ? "▶ 실행"
+                    : `필요: ${draftCheck.missing.join(" · ")}`}
+              </button>
+            )}
           </div>
-          <span className="world-status">ENTER</span>
-        </Link>
-      </section>
+
+          {events.length > 0 && (
+            <details className={styles.eventDetails}>
+              <summary>실행 이벤트 {events.length}개</summary>
+              <ol>
+                {events.slice(-8).map((event) => (
+                  <li key={event.eventId}>
+                    <span>{event.sequence}</span>
+                    <code>{event.type}</code>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
+        </aside>
+      </div>
     </main>
   );
 }

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowerjvm.dev/flower-garden/contracts/first-bloom-blueprint.schema.json",
+  "title": "First Bloom Flower Blueprint",
+  "description": "A player-authored Worker, Flow, and ordered Step assembly accepted by the JVM Runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "workerId",
+    "flowType",
+    "stepIds"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "workerId": {
+      "const": "first-bloom-worker"
+    },
+    "flowType": {
+      "const": "first-flow"
+    },
+    "stepIds": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "prepare-soil",
+          "wait-for-sunlight",
+          "grow-stem",
+          "bloom"
+        ]
+      }
+    }
+  }
+}

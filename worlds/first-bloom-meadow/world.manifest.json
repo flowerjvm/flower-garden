@@ -13,13 +13,14 @@
       "displayName": "The First Flow",
       "status": "AVAILABLE",
       "learningObjectives": [
-        "Explain Engine → Worker → Flow → Step → StepResult.",
-        "Observe one actual Flower Worker tick per player TICK command.",
-        "Compare STAY with DONE across the four-tick core mission.",
-        "Explain that advancing to a Step and entering it happen on separate Flower ticks."
+        "Assemble Engine → Worker → Flow → Step as visible parts.",
+        "Submit the player's ordered Step blueprint to the actual Flower Runtime.",
+        "Observe StepResult DONE, STAY, and FAIL from real Step execution.",
+        "Publish a real Bloom event while a Flower Step waits for player input."
       ],
       "allowedCommands": [
-        "TICK"
+        "TICK",
+        "PUBLISH_EVENT"
       ]
     }
   ]

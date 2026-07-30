@@ -26,6 +26,7 @@ public record RunCommand(
     public enum CommandKind {
         TICK,
         ADVANCE_TIME,
-        SEND_SIGNAL
+        SEND_SIGNAL,
+        PUBLISH_EVENT
     }
 }

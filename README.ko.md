@@ -6,12 +6,12 @@
 
 Flower Garden은 [Flower](https://github.com/flowerjvm/flower)의 핵심 개념을
 작은 3D 게임으로 경험하는 학습 프로젝트입니다. 문서를 먼저 외우는 대신,
-플레이어가 결과를 **예측하고**, 실제 Flower에 명령을 보내고, 실행 trace와
-3D 세계를 함께 보며 왜 그런 결과가 나왔는지 확인합니다.
+플레이어가 Worker, Flow, Step을 직접 조립하고 실제 Flower에서 실행한 뒤,
+대기 중인 Step에 이벤트를 보내며 그 결과를 3D 세계에서 확인합니다.
 
 > **English:** Flower Garden is a collection of playful 3D microworlds for
-> learning Flower through prediction, real runtime execution, observation, and
-> source-backed evidence.
+> learning Flower through hands-on assembly, real runtime execution, events,
+> and runtime-authoritative world projection.
 
 <table>
   <tr>
@@ -36,17 +36,17 @@ Flower의 생태계가 커질수록 처음 배우는 사람은 `Engine`, `Worker
 실행 계약만 다룹니다.
 
 ```text
-예측
+Worker · Flow · Step 조립
   ↓
-플레이어 명령
+조립한 blueprint 제출
   ↓
 실제 Flower 실행
   ↓
-Runtime trace 관찰
+대기 중인 Step에 이벤트 보내기
   ↓
-3D 세계에서 결과 확인
+실행 이벤트 · 상태 변경 기록
   ↓
-관련 상태 전이 · 소스 · 테스트로 설명
+3D 세계에 결과 투영
 ```
 
 이 프로젝트의 가장 중요한 원칙은 다음과 같습니다.
@@ -132,24 +132,37 @@ NEXT_PUBLIC_FLOWER_RUNTIME_URL=http://127.0.0.1:8080 \
 **Mission: The First Flow**
 
 ```text
-Engine → Worker → Flow → Step → StepResult
+Engine → Worker → 플레이어가 만든 Flow → Step 순서 → StepResult
 ```
 
-네 번의 플레이어 `TICK`이 실제 `Worker.tickOnce()` 네 번으로 이어집니다.
+플레이어는 Worker와 Flow를 놓고 다음 네 Step의 순서를 직접 정합니다.
 
-| Tick | 현재 Step | 실제 StepResult | 관찰할 내용 |
-| ---: | --- | --- | --- |
-| 1 | `prepare-soil` | `STAY` | 현재 Step에 머무릅니다. |
-| 2 | `prepare-soil` | `DONE` | 다음 Step으로 전진합니다. |
-| 3 | `grow-stem` | `DONE` | 다음 Step은 이후 tick에서 실행됩니다. |
-| 4 | `bloom` | `DONE` | Flow가 `FINISHED`가 됩니다. |
+```text
+prepare-soil
+wait-for-sunlight
+grow-stem
+bloom
+```
+
+브라우저는 정답을 판정하지 않고 조립한 순서를 JVM Runtime에 그대로
+보냅니다. Runtime은 그 순서로 실제 Flower `Flow`를 만들고 한 tick씩
+실행합니다. `wait-for-sunlight`가 `STAY`하면 게임이 멈추고, 플레이어가
+`SUNLIGHT_GRANTED`를 보냅니다. 이 입력은 실제 Bloom EventBus와 Flower
+adapter를 통과합니다. 이벤트 발행 자체는 Worker를 tick하지 않으며, 다음
+실제 tick에서 기다리던 Step이 저장된 사실을 확인하고 `DONE`이 됩니다.
+
+순서를 잘못 조립하면 필요한 선행 상태를 찾지 못한 실제 Step이
+`StepResult.FAIL`을 반환합니다. 3D 정원은 그때 Runtime이 기록한 상태에서
+멈춥니다. 첫 미션의 의존성은 흙 준비 → 햇빛 대기 → 줄기 성장 → 개화
+순서입니다.
 
 이 월드에서는 다음을 배웁니다.
 
-- Engine에 연결된 Worker가 Flow를 실행하는 방식
-- 한 번의 Flow tick에서 해당 Flow의 현재 Step은 최대 하나만 실행된다는 계약
-- `STAY`와 `DONE`의 차이
-- Step 이동과 다음 Step 실행이 서로 다른 tick이라는 경계
+- Engine, Worker, Flow, Step의 실행 관계
+- Step 순서와 도메인 선행 조건
+- `STAY`, `DONE`, `FAIL`의 차이
+- 이벤트가 wait를 깨워도 Worker를 몰래 진행시키지는 않는다는 경계
+- Runtime 상태 변경만 3D 정원을 바꾼다는 원칙
 
 ### 02 · Verdant Signal Garden
 
@@ -234,6 +247,7 @@ sequence 1부터 최신 이벤트까지의 누적 trace입니다.
 | Command | Payload | 실제 효과 |
 | --- | --- | --- |
 | `TICK` | `{}` | 해당 미션 Worker의 `tickOnce()`를 정확히 한 번 호출 |
+| `PUBLISH_EVENT` | `{"type":"SUNLIGHT_GRANTED"}` | tick 없이 First Bloom Bloom 이벤트 발행 |
 | `ADVANCE_TIME` | `{"millis": 1..300000}` | Verdant의 실제 `ManualClock`만 전진 |
 | `SEND_SIGNAL` | `{"name":"yard-assignment"}` | Verdant가 구독한 실제 미션 event 발행 |
 
@@ -274,9 +288,9 @@ npm run fixtures:verdant:check
 npm test
 ```
 
-Runtime 테스트는 실제 Flower 실행으로 First Bloom의 네 tick과 Verdant의
-세 Signal/Timeout 시나리오를 검증합니다. 테스트에는 고정 sleep을 사용하지
-않습니다.
+Runtime 테스트는 플레이어가 정한 First Bloom Step 순서, 성공/실패 선행
+조건, Bloom 이벤트 전달과 idempotency, Verdant의 세 Signal/Timeout
+시나리오를 실제 Flower 실행으로 검증합니다. 고정 sleep은 사용하지 않습니다.
 
 ## 현재 범위
 

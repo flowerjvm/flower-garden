@@ -4,7 +4,7 @@ import { FirstBloomMeadow } from "@/worlds/first-bloom-meadow/web/FirstBloomMead
 export const metadata: Metadata = {
   title: "Flower Garden · First Bloom Meadow",
   description:
-    "실제 Flower Runtime의 Engine, Worker, Flow, Step, StepResult를 네 번의 Worker tick으로 배우는 첫 번째 3D 월드.",
+    "Worker, Flow, Step을 직접 조립하고 Bloom 이벤트로 실제 Flower Flow를 움직이는 첫 번째 3D 월드.",
 };
 
 export default function FirstBloomMeadowPage() {

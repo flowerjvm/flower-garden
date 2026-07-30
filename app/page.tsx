@@ -43,9 +43,9 @@ export default function Home() {
             세계 하나씩.
           </h1>
           <p className={styles.heroLead}>
-            설명서를 외우기 전에 직접 예측하고 실행해 보세요. 각 월드는
-            실제 Flower Runtime의 한 가지 계약만 선명하게 보여주고, 다음
-            월드에서 그 위에 새로운 개념을 쌓습니다.
+            설명서를 외우기 전에 직접 조립하고 실행해 보세요. 각 월드는
+            실제 Flower Runtime의 한 가지 개념을 손으로 다루게 하고, 다음
+            월드에서 그 위에 새로운 부품을 더합니다.
           </p>
         </div>
 

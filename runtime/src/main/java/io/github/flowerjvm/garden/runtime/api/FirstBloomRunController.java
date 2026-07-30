@@ -3,6 +3,7 @@ package io.github.flowerjvm.garden.runtime.api;
 import io.github.flowerjvm.garden.runtime.firstbloom.FirstBloomRunCoordinator;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -18,7 +19,7 @@ public final class FirstBloomRunController {
     }
 
     @PostMapping("/worlds/first-bloom-meadow/runs")
-    public RunView createRun() {
-        return coordinator.createRun();
+    public RunView createRun(@RequestBody FirstBloomBlueprint blueprint) {
+        return coordinator.createRun(blueprint);
     }
 }

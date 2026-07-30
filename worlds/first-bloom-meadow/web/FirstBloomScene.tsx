@@ -9,13 +9,15 @@ import {
   useRef,
 } from "react";
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { FirstBloomProjection } from "../../../web/runtime/types";
 
-const STEP_POSITIONS: Record<string, [number, number, number]> = {
-  "prepare-soil": [-2.5, 0.65, 1.8],
-  "grow-stem": [1, 0.65, 0],
-  bloom: [4.3, 0.65, -1.8],
-};
+const STEP_POSITIONS: Array<[number, number, number]> = [
+  [-3.55, 0.65, 2.25],
+  [-0.85, 0.65, 0.8],
+  [1.85, 0.65, -0.65],
+  [4.55, 0.65, -2.1],
+];
 
 const TREE_POSITIONS: Array<[number, number, number]> = [
   [-7, 0, -5],
@@ -29,8 +31,17 @@ const TREE_POSITIONS: Array<[number, number, number]> = [
 interface FirstBloomSceneProps {
   projection: FirstBloomProjection;
   reducedMotion: boolean;
-  selectedStepId?: string;
-  onSelectStep: (stepId: string) => void;
+  cameraResetKey: number;
+  cameraControlsEnabled: boolean;
+}
+
+function stepPosition(
+  stepId: string | undefined,
+  blueprintStepIds: readonly string[],
+): [number, number, number] | undefined {
+  if (!stepId) return undefined;
+  const runtimeIndex = blueprintStepIds.indexOf(stepId);
+  return runtimeIndex >= 0 ? STEP_POSITIONS[runtimeIndex] : undefined;
 }
 
 function seededHeight(x: number, z: number): number {
@@ -38,39 +49,19 @@ function seededHeight(x: number, z: number): number {
   return Math.abs(value % 1);
 }
 
-function MeadowTerrain() {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const blocks = useMemo(() => {
-    const result: Array<{
-      position: [number, number, number];
-      scale: [number, number, number];
-      color: THREE.Color;
-    }> = [];
+interface TerrainBlock {
+  position: [number, number, number];
+  scale: [number, number, number];
+}
 
-    for (let x = -9; x <= 9; x += 1) {
-      for (let z = -7; z <= 7; z += 1) {
-        const edge = Math.abs(x) > 7 || Math.abs(z) > 5;
-        const variation = seededHeight(x, z);
-        const height = edge && variation > 0.52 ? 0.65 : 0.42;
-        const isPath = Math.abs(z + x * 0.28) < 0.92 && x > -6;
-        const color = isPath
-          ? new THREE.Color(variation > 0.5 ? "#d6bc79" : "#c9aa68")
-          : new THREE.Color(
-              variation > 0.72
-                ? "#78a84e"
-                : variation > 0.35
-                  ? "#6f9e46"
-                  : "#628f3f",
-            );
-        result.push({
-          position: [x, -height / 2, z],
-          scale: [0.98, height, 0.98],
-          color,
-        });
-      }
-    }
-    return result;
-  }, []);
+function TerrainBatch({
+  blocks,
+  color,
+}: {
+  blocks: readonly TerrainBlock[];
+  color: string;
+}) {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
 
   useLayoutEffect(() => {
     const mesh = meshRef.current;
@@ -81,21 +72,65 @@ function MeadowTerrain() {
       helper.scale.set(...block.scale);
       helper.updateMatrix();
       mesh.setMatrixAt(index, helper.matrix);
-      mesh.setColorAt(index, block.color);
     });
     mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, [blocks]);
 
   return (
     <instancedMesh
       ref={meshRef}
       args={[undefined, undefined, blocks.length]}
-      receiveShadow
     >
       <boxGeometry args={[1, 1, 1]} />
-      <meshLambertMaterial vertexColors />
+      <meshLambertMaterial color={color} />
     </instancedMesh>
+  );
+}
+
+function MeadowTerrain() {
+  const batches = useMemo(() => {
+    const grouped = new Map<string, TerrainBlock[]>();
+
+    for (let x = -9; x <= 9; x += 1) {
+      for (let z = -7; z <= 7; z += 1) {
+        const edge = Math.abs(x) > 7 || Math.abs(z) > 5;
+        const variation = seededHeight(x, z);
+        const height = edge && variation > 0.52 ? 0.65 : 0.42;
+        const isPath = Math.abs(z + x * 0.28) < 0.92 && x > -6;
+        const color = isPath
+          ? variation > 0.5
+            ? "#d6bc79"
+            : "#c9aa68"
+          : variation > 0.72
+            ? "#78a84e"
+            : variation > 0.35
+              ? "#6f9e46"
+              : "#628f3f";
+        const blocks = grouped.get(color) ?? [];
+        blocks.push({
+          position: [x, -height / 2, z],
+          scale: [0.98, height, 0.98],
+        });
+        grouped.set(color, blocks);
+      }
+    }
+
+    return [...grouped.entries()].map(([color, blocks]) => ({
+      color,
+      blocks,
+    }));
+  }, []);
+
+  return (
+    <group>
+      {batches.map((batch) => (
+        <TerrainBatch
+          key={batch.color}
+          color={batch.color}
+          blocks={batch.blocks}
+        />
+      ))}
+    </group>
   );
 }
 
@@ -168,6 +203,47 @@ function TilledSoil({ ready }: { ready: boolean }) {
   );
 }
 
+function SunlightGate({
+  waiting,
+  granted,
+}: {
+  waiting: boolean;
+  granted: boolean;
+}) {
+  return (
+    <group position={[0, 0.2, 0]}>
+      <mesh position={[-0.72, 0.9, 0]} castShadow>
+        <boxGeometry args={[0.28, 1.8, 0.28]} />
+        <meshLambertMaterial color="#805b32" />
+      </mesh>
+      <mesh position={[0.72, 0.9, 0]} castShadow>
+        <boxGeometry args={[0.28, 1.8, 0.28]} />
+        <meshLambertMaterial color="#805b32" />
+      </mesh>
+      <mesh position={[0, 1.72, 0]} castShadow>
+        <boxGeometry args={[1.7, 0.26, 0.32]} />
+        <meshLambertMaterial color="#a47b42" />
+      </mesh>
+      <mesh position={[0, 1.04, 0]} castShadow>
+        <boxGeometry args={[0.75, 0.75, 0.42]} />
+        <meshLambertMaterial
+          color={granted ? "#ffe270" : waiting ? "#f2c65c" : "#b8a66a"}
+          emissive={granted ? "#d39a23" : "#000000"}
+          emissiveIntensity={granted ? 0.7 : 0}
+        />
+      </mesh>
+      {granted && (
+        <pointLight
+          position={[0, 1.1, 0.45]}
+          color="#ffe492"
+          intensity={4}
+          distance={6}
+        />
+      )}
+    </group>
+  );
+}
+
 function Sprout({ grown }: { grown: boolean }) {
   const stemHeight = grown ? 1.65 : 0.42;
   return (
@@ -227,16 +303,12 @@ function StepPlot({
   stepId,
   index,
   projection,
-  selected,
-  onSelect,
 }: {
   stepId: string;
   index: number;
   projection: FirstBloomProjection;
-  selected: boolean;
-  onSelect: () => void;
 }) {
-  const position = STEP_POSITIONS[stepId];
+  const position = STEP_POSITIONS[index];
   const entered = projection.enteredStepIds.includes(stepId);
   const complete = projection.completedStepIds.includes(stepId);
   const active = projection.currentStepId === stepId;
@@ -245,30 +317,32 @@ function StepPlot({
   const flowerReady = projection.flowerStage >= 3;
 
   return (
-    <group
-      position={position}
-      onPointerDown={(event) => {
-        event.stopPropagation();
-        onSelect();
-      }}
-    >
+    <group position={position}>
       <mesh position={[0, -0.06, 0]} receiveShadow>
         <boxGeometry args={[2.85, 0.38, 2.35]} />
         <meshLambertMaterial
           color={
             active
               ? "#f6d978"
-              : selected
-                ? "#d9e7a8"
-                : complete
+              : complete
                   ? "#a8c778"
                   : "#91ad6c"
           }
         />
       </mesh>
-      <TilledSoil ready={soilReady || index > 0} />
-      {index === 1 && <Sprout grown={stemReady} />}
-      {index === 2 && <PixelBloom blooming={flowerReady} />}
+      {stepId === "prepare-soil" && <TilledSoil ready={soilReady} />}
+      {stepId === "wait-for-sunlight" && (
+        <SunlightGate
+          waiting={projection.waitingForBloomEvent}
+          granted={
+            projection.bloomEventPublished ||
+            projection.gardenState === "SUNLIGHT_READY" ||
+            projection.flowerStage >= 2
+          }
+        />
+      )}
+      {stepId === "grow-stem" && <Sprout grown={stemReady} />}
+      {stepId === "bloom" && <PixelBloom blooming={flowerReady} />}
       <mesh position={[-1.1, 0.58, -0.82]} castShadow>
         <boxGeometry args={[0.2, 0.8, 0.2]} />
         <meshLambertMaterial color="#6b4b2f" />
@@ -277,11 +351,11 @@ function StepPlot({
         <boxGeometry args={[1.12, 0.48, 0.16]} />
         <meshLambertMaterial color={entered ? "#f7efc2" : "#cdbd85"} />
       </mesh>
-      {(active || selected) && (
+      {active && (
         <mesh position={[0, 0.14, 0]}>
           <boxGeometry args={[3.02, 0.12, 2.52]} />
           <meshBasicMaterial
-            color={active ? "#ffe487" : "#d6f2a9"}
+            color="#ffe487"
             transparent
             opacity={0.68}
           />
@@ -293,19 +367,21 @@ function StepPlot({
 
 function WorkerBee({
   stepId,
+  blueprintStepIds,
   sequence,
   reducedMotion,
 }: {
   stepId?: string;
+  blueprintStepIds: readonly string[];
   sequence: number;
   reducedMotion: boolean;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const target = useMemo<[number, number, number]>(() => {
-    const stepTarget = stepId ? STEP_POSITIONS[stepId] : undefined;
+    const stepTarget = stepPosition(stepId, blueprintStepIds);
     if (!stepTarget) return [-5.25, 2.2, 2.9];
     return [stepTarget[0] - 0.95, 2.55, stepTarget[2] + 0.35];
-  }, [stepId]);
+  }, [blueprintStepIds, stepId]);
   const { invalidate } = useThree();
 
   useEffect(() => {
@@ -352,16 +428,81 @@ function WorkerBee({
   );
 }
 
+function OrbitCamera({
+  resetKey,
+  enabled,
+}: {
+  resetKey: number;
+  enabled: boolean;
+}) {
+  const { camera, gl, invalidate } = useThree();
+  const controlsRef = useRef<OrbitControls | null>(null);
+
+  // OrbitControls is an imperative Three.js adapter that intentionally owns
+  // camera input after the canvas mounts.
+  useEffect(() => {
+    const controls = new OrbitControls(camera, gl.domElement);
+    controls.target.set(0, 0.8, 0);
+    controls.enabled = false;
+    controls.enableRotate = true;
+    controls.enableZoom = true;
+    controls.enablePan = true;
+    controls.enableDamping = false;
+    controls.minDistance = 6;
+    controls.maxDistance = 28;
+    controls.minPolarAngle = 0.3;
+    controls.maxPolarAngle = 1.45;
+    controls.screenSpacePanning = true;
+    const render = () => invalidate();
+    const preventMenu = (event: MouseEvent) => {
+      if (controls.enabled) event.preventDefault();
+    };
+    controls.addEventListener("change", render);
+    gl.domElement.addEventListener("contextmenu", preventMenu);
+    controls.update();
+    controlsRef.current = controls;
+
+    return () => {
+      controls.removeEventListener("change", render);
+      controls.dispose();
+      gl.domElement.removeEventListener("contextmenu", preventMenu);
+      controlsRef.current = null;
+    };
+  }, [camera, gl, invalidate]);
+
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    controls.enabled = enabled;
+    if (enabled) controls.update();
+    invalidate();
+  }, [enabled, invalidate]);
+
+  useEffect(() => {
+    const controls = controlsRef.current;
+    camera.position.set(12, 11, 15);
+    if (controls) {
+      controls.target.set(0, 0.8, 0);
+      controls.update();
+    } else {
+      camera.lookAt(0, 0.8, 0);
+    }
+    invalidate();
+  }, [camera, invalidate, resetKey]);
+
+  return null;
+}
+
 function SceneContents({
   projection,
   reducedMotion,
-  selectedStepId,
-  onSelectStep,
+  cameraResetKey,
+  cameraControlsEnabled,
 }: FirstBloomSceneProps) {
   const { invalidate } = useThree();
   useEffect(() => {
     invalidate();
-  }, [invalidate, projection.activeEvent?.sequence, selectedStepId]);
+  }, [invalidate, projection.activeEvent?.sequence]);
 
   return (
     <>
@@ -381,6 +522,10 @@ function SceneContents({
         shadow-camera-bottom={-9}
       />
       <MeadowTerrain />
+      <OrbitCamera
+        resetKey={cameraResetKey}
+        enabled={cameraControlsEnabled}
+      />
       {TREE_POSITIONS.map((position, index) => (
         <BlockTree
           key={index}
@@ -389,20 +534,23 @@ function SceneContents({
         />
       ))}
       <EngineShrine active={projection.phase !== "NOT_STARTED"} />
-      {(["prepare-soil", "grow-stem", "bloom"] as const).map(
+      {projection.blueprintStepIds.map(
         (stepId, index) => (
           <StepPlot
             key={stepId}
             stepId={stepId}
             index={index}
             projection={projection}
-            selected={selectedStepId === stepId}
-            onSelect={() => onSelectStep(stepId)}
           />
         ),
       )}
       <WorkerBee
-        stepId={projection.currentStepId}
+        stepId={
+          projection.lastExecutedStepId ?? projection.currentStepId
+        }
+        blueprintStepIds={
+          projection.blueprintStepIds
+        }
         sequence={projection.activeEvent?.sequence ?? 0}
         reducedMotion={reducedMotion}
       />
@@ -413,7 +561,7 @@ function SceneContents({
 export function FirstBloomScene(props: FirstBloomSceneProps) {
   return (
     <Canvas
-      className="first-bloom-canvas"
+      className="first-bloom-builder-canvas"
       aria-hidden="true"
       camera={{ position: [12, 11, 15], fov: 40, near: 0.1, far: 80 }}
       dpr={[1, 1.45]}
@@ -426,7 +574,7 @@ export function FirstBloomScene(props: FirstBloomSceneProps) {
         stencil: false,
       }}
       onCreated={({ camera, gl }) => {
-        camera.lookAt(0, 0.55, 0);
+        camera.lookAt(0, 0.8, 0);
         gl.outputColorSpace = THREE.SRGBColorSpace;
       }}
     >

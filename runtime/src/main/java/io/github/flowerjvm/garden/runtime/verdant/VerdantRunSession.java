@@ -127,6 +127,8 @@ final class VerdantRunSession {
                 case TICK -> executeTick(command);
                 case ADVANCE_TIME -> executeAdvanceTime(command);
                 case SEND_SIGNAL -> executeSendSignal(command);
+                case PUBLISH_EVENT -> throw new IllegalArgumentException(
+                        "Verdant Signal Garden does not support PUBLISH_EVENT");
             };
             receiptsByCommandId.put(
                     command.commandId(),

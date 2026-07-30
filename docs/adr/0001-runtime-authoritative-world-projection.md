@@ -6,8 +6,8 @@
 
 ## Context
 
-Flower Garden teaches Flower by letting a player predict, run, and inspect a
-real workflow inside a lightweight 3D world. The project has one
+Flower Garden teaches Flower by letting a player assemble, run, and manipulate
+a real workflow inside a lightweight 3D world. The project has one
 non-negotiable pipeline:
 
 ```text
@@ -45,7 +45,7 @@ The current live path is:
 Browser command intent
     ↓ POST command
 Mission run coordinator
-    ↓ actual ManualClock, EventBus, or Worker operation
+    ↓ actual ManualClock, Bloom/EventBus, or Worker operation
 Flower Engine → Worker → Flow → Step → StepResult
     ↓ runtime-side trace recording
 Cumulative ordered TraceEvent list
@@ -76,47 +76,60 @@ Each First Bloom run creates:
 - a real Flower `ManualClock`;
 - an `Engine` attached with `Engine.attach()`;
 - one manually driven Flower `Worker`;
-- one Flow containing `prepare-soil`, `grow-stem`, and `bloom`;
+- one Bloom `LocalEventBus` connected through `BloomEventBus.wrap(...)`;
+- one Flow containing the player's ordering of `prepare-soil`,
+  `wait-for-sunlight`, `grow-stem`, and `bloom`;
+- fresh Step instances and one mission plot state for that run;
 - an in-memory recorder scoped to that run.
 
 `Engine.start()` is not called, so no scheduler can advance the Flow. The only
 execution path is an accepted player `TICK` command calling
-`Worker.tickOnce()` exactly once.
+`Worker.tickOnce()` exactly once. Publishing a Bloom event never ticks the
+Worker.
 
-Run creation attaches the Engine, submits the Flow, and records:
+Run creation validates the blueprint, builds the real Flow in the submitted
+order, attaches the Engine, submits the Flow, and records:
 
 1. `GARDEN.RUN_CREATED`, including the actual manual runtime topology;
-2. `GARDEN.FLOW_READY`, copied from the real `FlowSnapshot`.
+2. `GARDEN.BLUEPRINT_ACCEPTED`, including the actual Step order;
+3. the initial `GARDEN.PLOT_UPDATED`;
+4. `GARDEN.FLOW_READY`, copied from the real `FlowSnapshot`.
 
 `GARDEN.FLOW_READY` is a coordinator observation. Flower's
 `onFlowSubmitted(...)` listener callback is not fabricated during creation; it
 is emitted by Flower when the first `tickOnce()` applies the pending
 submission.
 
-The core mission then advances in four real Worker ticks:
+A normal assembly reaches `wait-for-sunlight`, returns `STAY`, and pauses for
+the player's `SUNLIGHT_GRANTED` input. The Runtime first stores the domain fact
+and then publishes `SunlightGranted` through Bloom. If the wait is active, the
+Flower adapter wakes it; if the event arrived early, the later Step still
+observes the stored fact. On the next real tick the Step returns `DONE`.
 
-| Worker tick | Step invocation | StepResult | State after tick |
-| ---: | --- | --- | --- |
-| 1 | `prepare-soil` tick 1 | `STAY` | `RUNNING @ prepare-soil` |
-| 2 | `prepare-soil` tick 2 | `DONE` | `RUNNING @ grow-stem` |
-| 3 | `grow-stem` tick 1 | `DONE` | `RUNNING @ bloom` |
-| 4 | `bloom` tick 1 | `DONE` | `FINISHED` |
+Mission prerequisites live inside actual Steps. `wait-for-sunlight` requires
+prepared soil, `grow-stem` requires accepted sunlight, and `bloom` requires a
+grown stem. A wrong assembly returns a real `StepResult.FAIL` instead of being
+graded by the browser.
 
 Flower invokes at most one current Step per Flow tick. Advancing to a next Step
-does not enter or tick that Step until a later Worker tick.
+does not execute that Step until a later Worker tick.
 
 ### 3. Trace only observable runtime facts
 
-The recorder combines three actual boundaries:
+The recorder combines four actual boundaries:
 
-1. `FirstBloomRunCoordinator` records accepted tick boundaries and snapshots;
+1. `FirstBloomRunCoordinator` records accepted command boundaries and
+   snapshots;
 2. `FlowerListener` records Flow and Step lifecycle callbacks;
-3. the real mission Step records the `StepResult` it is about to return.
+3. the real mission Step records the `StepResult` and plot change it is about
+   to return;
+4. Bloom publication and the Flower adapter affect the real waiting
+   `StepContext`.
 
-The Step probe exists because Flower `0.1.1` does not expose the exact
-`StepResult` through `FlowerListener`. It runs inside the actual Flower Step
-immediately before returning `StepResult.stay()` or `StepResult.done()`. The
-browser never reconstructs that decision.
+The Step probe exists because the current Flower listener API does not expose
+the exact `StepResult`. It runs inside the actual Flower Step immediately
+before returning `STAY`, `DONE`, `FAIL`, or `GOTO`. The browser never
+reconstructs that decision.
 
 Each accepted tick is delimited by:
 
@@ -148,16 +161,24 @@ The First Bloom command contract requires:
 - a non-empty `commandId`;
 - the same `runId` as the URL;
 - `expectedSequence` equal to the latest returned sequence;
-- `kind: "TICK"`;
-- an empty `payload`.
+- either `TICK {}` or
+  `PUBLISH_EVENT {"type":"SUNLIGHT_GRANTED"}`.
+
+First Bloom run creation also requires a versioned blueprint with the fixed
+Worker and Flow IDs plus exactly four unique known Step IDs. Their order is not
+restricted. The Runtime constructs the real Flow in the submitted order.
 
 The per-run coordinator serializes commands. Retrying an already successful
 `commandId` returns the original response and does not tick Flower again.
 `expectedSequence` rejects a stale or speculative next action.
 
-The API intentionally has no event GET endpoint and no SSE stream. A
-cumulative response is enough for the first local vertical slice and keeps the
-authority boundary testable without introducing an unneeded transport layer.
+The event command first stores the mission fact and publishes it through the
+real Bloom bus. It neither calls `tickOnce()` nor changes Flow phase. Its next
+accepted `TICK` is the only operation that can apply a StepResult.
+
+The API intentionally has no event GET endpoint and no SSE stream. A cumulative
+response is enough for the current local vertical slice and keeps the authority
+boundary testable without introducing an unneeded transport layer.
 
 Verdant adds a second run factory:
 
@@ -180,7 +201,9 @@ Idempotency and optimistic sequence checks apply equally to all three.
 
 Projection replay reduces a prerecorded trace to reconstruct the semantic world
 and its animation timeline. It does not execute Flower and must be visibly
-labelled as replay.
+labelled as replay. It is suitable only for fixed scenarios. First Bloom is a
+player-authored Flow builder and therefore requires the live Runtime rather
+than substituting a canonical success replay.
 
 Flower checkpoint/resume is a separate capability. A checkpoint stores where a
 Flow can resume; it is not an execution-event history and is not part of the
@@ -252,6 +275,8 @@ implemented merely because a hypothetical world might need it.
 
 - Every visible core transition is backed by an actual Flower run.
 - One command maps to one Worker tick, so the learning model matches Flower.
+- A player-authored Step order is executed rather than graded in the browser.
+- Bloom events wake real Flower waits without hiding a Worker tick.
 - The cumulative response is simple to inspect, replay, and test.
 - A second world reuses the proven boundary without introducing a browser-side
   Signal/Timeout simulator.
@@ -288,13 +313,14 @@ the required runtime-to-world pipeline.
 
 The current vertical slice must pass:
 
-1. Maven tests proving the four Flower ticks without sleeps;
-2. HTTP tests for create, command validation, sequence checking, and idempotency;
-3. a canonical trace whose event order matches the runtime;
-4. JSON parsing and cross-event checks for contiguous sequence, stable run
-   identity, and final sequence;
-5. deterministic Signal-first, Timeout-first, and both-true tests;
-6. byte-for-byte comparison of generated runtime responses with checked-in
+1. Maven tests proving player Step order is the real Flower Step order;
+2. actual success and `StepResult.FAIL` dependency tests without sleeps;
+3. Bloom event-before-wait, event-after-wait, idempotency, and no-hidden-tick
+   tests;
+4. HTTP tests for strict blueprint, payload, sequence, and command validation;
+5. projection tests proving browser drafts and unknown events cannot manufacture
+   semantic world state;
+6. deterministic Signal-first, Timeout-first, and both-true Verdant tests;
+7. byte-for-byte comparison of generated runtime responses with checked-in
    Verdant replay bundles;
-7. projection reducer tests for all three outcomes and unknown event kinds;
-8. web build and replay smoke tests for both routes.
+8. web build, asset, and launcher smoke tests for both routes.

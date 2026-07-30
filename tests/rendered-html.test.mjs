@@ -83,12 +83,20 @@ test("server-renders First Bloom Meadow as the first playable world", async () =
   );
   assert.match(html, /Flower Garden/);
   assert.match(html, /First Bloom Meadow/);
-  assert.match(html, /The First Flow/);
-  assert.match(html, /RUNTIME TRACE/);
+  assert.match(html, /꽃 한 송이 피우기/);
+  assert.match(html, /FLOW BUILDER/);
+  assert.match(html, /조립판/);
   assert.match(html, /Engine/);
   assert.match(html, /Worker/);
-  assert.match(html, /StepResult/);
+  assert.match(html, /Flow/);
+  assert.match(html, /Step/);
+  assert.match(html, /실행/);
+  assert.match(html, /전체 보기/);
   assert.match(html, /href="\/"/);
+  assert.doesNotMatch(
+    html,
+    /RUNTIME TRACE|진실의 기록|근거 보기|관찰자|예측|TRACE REPLAY/,
+  );
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
@@ -111,7 +119,7 @@ test("server-renders Verdant Signal Garden as the second playable world", async 
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
-test("production server serves the CSS and JavaScript needed by Verdant", async (t) => {
+test("production server serves each playable world's CSS and JavaScript", async (t) => {
   const { startProdServer } = await import("vinext/server/prod-server");
   const production = await startProdServer({
     host: "127.0.0.1",
@@ -134,36 +142,41 @@ test("production server serves the CSS and JavaScript needed by Verdant", async 
   );
 
   const origin = `http://127.0.0.1:${production.port}`;
-  const response = await fetch(`${origin}/worlds/verdant-signal-garden`);
-  assert.equal(response.status, 200);
-  const html = await response.text();
-  const assetPaths = [
-    ...new Set(
-      [...html.matchAll(
-        /(?:href|src)="(\/(?:assets|_next\/static)\/[^"]+\.(?:css|js))"/gi,
-      )].map((match) => match[1]),
-    ),
-  ];
+  for (const worldId of [
+    "first-bloom-meadow",
+    "verdant-signal-garden",
+  ]) {
+    const response = await fetch(`${origin}/worlds/${worldId}`);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    const assetPaths = [
+      ...new Set(
+        [...html.matchAll(
+          /(?:href|src)="(\/(?:assets|_next\/static)\/[^"]+\.(?:css|js))"/gi,
+        )].map((match) => match[1]),
+      ),
+    ];
 
-  assert.ok(
-    assetPaths.some((assetPath) => assetPath.endsWith(".css")),
-    "Verdant HTML must reference at least one stylesheet",
-  );
-  assert.ok(
-    assetPaths.some((assetPath) => assetPath.endsWith(".js")),
-    "Verdant HTML must reference at least one JavaScript module",
-  );
+    assert.ok(
+      assetPaths.some((assetPath) => assetPath.endsWith(".css")),
+      `${worldId} HTML must reference at least one stylesheet`,
+    );
+    assert.ok(
+      assetPaths.some((assetPath) => assetPath.endsWith(".js")),
+      `${worldId} HTML must reference at least one JavaScript module`,
+    );
 
-  for (const assetPath of assetPaths) {
-    const assetResponse = await fetch(`${origin}${assetPath}`, {
-      method: "HEAD",
-    });
-    assert.equal(assetResponse.status, 200, `${assetPath} must be served`);
-    const contentType = assetResponse.headers.get("content-type") ?? "";
-    if (assetPath.endsWith(".css")) {
-      assert.match(contentType, /^text\/css\b/i);
-    } else {
-      assert.match(contentType, /^(?:application|text)\/javascript\b/i);
+    for (const assetPath of assetPaths) {
+      const assetResponse = await fetch(`${origin}${assetPath}`, {
+        method: "HEAD",
+      });
+      assert.equal(assetResponse.status, 200, `${assetPath} must be served`);
+      const contentType = assetResponse.headers.get("content-type") ?? "";
+      if (assetPath.endsWith(".css")) {
+        assert.match(contentType, /^text\/css\b/i);
+      } else {
+        assert.match(contentType, /^(?:application|text)\/javascript\b/i);
+      }
     }
   }
 });
@@ -201,56 +214,48 @@ test("removes starter preview code and declares the 3D world dependencies", asyn
   );
 });
 
-test("canonical replay is a contiguous trace from four real Worker ticks", async () => {
-  const fixture = JSON.parse(
-    await readFile(
+test("First Bloom contract accepts player order and a real Bloom event", async () => {
+  const [blueprint, command, manifest] = await Promise.all([
+    readFile(
+      new URL("../contracts/first-bloom-blueprint.schema.json", import.meta.url),
+      "utf8",
+    ).then(JSON.parse),
+    readFile(
+      new URL("../contracts/run-command.schema.json", import.meta.url),
+      "utf8",
+    ).then(JSON.parse),
+    readFile(
       new URL(
-        "../contracts/fixtures/first-bloom-the-first-flow.trace.json",
+        "../worlds/first-bloom-meadow/world.manifest.json",
         import.meta.url,
       ),
       "utf8",
-    ),
-  );
-
-  assert.equal(fixture.schemaVersion, "1.0.0");
-  assert.equal(fixture.worldId, "first-bloom-meadow");
-  assert.equal(fixture.missionId, "the-first-flow");
-  assert.equal(fixture.flowerVersion, "0.1.1");
-  assert.deepEqual(
-    fixture.events.map((event) => event.sequence),
-    Array.from({ length: fixture.events.length }, (_, index) => index + 1),
-  );
-  assert.ok(
-    fixture.events.every(
-      (event) =>
-        event.schemaVersion === "1.0.0" &&
-        event.runId === fixture.runId &&
-        Array.isArray(event.evidence),
-    ),
-  );
-
-  const requested = fixture.events.filter(
-    (event) => event.kind === "GARDEN.TICK_REQUESTED",
-  );
-  const completed = fixture.events.filter(
-    (event) => event.kind === "GARDEN.TICK_COMPLETED",
-  );
-  const stepResults = fixture.events
-    .filter((event) => event.kind === "FLOWER.STEP_RESULT")
-    .map((event) => [event.flow.stepId, event.payload.result]);
-
-  assert.equal(requested.length, 4);
-  assert.equal(completed.length, 4);
-  assert.deepEqual(stepResults, [
-    ["prepare-soil", "STAY"],
-    ["prepare-soil", "DONE"],
-    ["grow-stem", "DONE"],
-    ["bloom", "DONE"],
+    ).then(JSON.parse),
   ]);
-  assert.equal(fixture.events.at(-1).sequence, 22);
-  assert.ok(
-    fixture.events.some((event) => event.kind === "FLOWER.FLOW_FINISHED"),
+
+  assert.equal(blueprint.additionalProperties, false);
+  assert.equal(blueprint.properties.stepIds.minItems, 4);
+  assert.equal(blueprint.properties.stepIds.maxItems, 4);
+  assert.equal(blueprint.properties.stepIds.uniqueItems, true);
+  assert.deepEqual(blueprint.properties.stepIds.items.enum, [
+    "prepare-soil",
+    "wait-for-sunlight",
+    "grow-stem",
+    "bloom",
+  ]);
+
+  const publishEvent = command.oneOf.find(
+    (variant) => variant.properties.kind.const === "PUBLISH_EVENT",
   );
+  assert.ok(publishEvent);
+  assert.equal(
+    publishEvent.properties.payload.properties.type.const,
+    "SUNLIGHT_GRANTED",
+  );
+  assert.deepEqual(manifest.missions[0].allowedCommands, [
+    "TICK",
+    "PUBLISH_EVENT",
+  ]);
 });
 
 test("three Verdant replays preserve the actual Signal and Timeout decisions", async () => {

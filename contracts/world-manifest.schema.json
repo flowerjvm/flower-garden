@@ -142,7 +142,8 @@
             "enum": [
               "TICK",
               "ADVANCE_TIME",
-              "SEND_SIGNAL"
+              "SEND_SIGNAL",
+              "PUBLISH_EVENT"
             ]
           }
         }
