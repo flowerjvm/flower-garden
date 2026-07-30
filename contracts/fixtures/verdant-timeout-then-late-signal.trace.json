@@ -1,0 +1,797 @@
+{
+  "$schema": "../trace-bundle.schema.json",
+  "schemaVersion": "1.0.0",
+  "runId": "canonical-verdant-timeout-first",
+  "worldId": "verdant-signal-garden",
+  "missionId": "signal-vs-timeout",
+  "scenarioId": "timeout-then-late-signal",
+  "flowerVersion": "0.1.1",
+  "flowDefinitionVersion": "verdant-signal-v1",
+  "projectionVersion": "verdant-signal-projection-v1",
+  "events": [
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000001",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 1,
+      "logicalTimeMillis": 0,
+      "source": "RUN_COORDINATOR",
+      "kind": "GARDEN.RUN_CREATED",
+      "flow": null,
+      "payload": {
+        "checkPrecedence": "SIGNAL_THEN_TIMEOUT",
+        "clock": "ManualClock",
+        "driveMode": "MANUAL",
+        "engineLifecycle": "ATTACHED",
+        "timeoutMillis": 30000,
+        "workerName": "verdant-interactive-worker"
+      },
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000002",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 2,
+      "logicalTimeMillis": 0,
+      "source": "RUN_COORDINATOR",
+      "kind": "GARDEN.FLOW_READY",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "READY",
+        "stepId": null,
+        "stepNo": 0
+      },
+      "payload": {
+        "initialStepId": "wait-for-yard-assignment",
+        "workerName": "verdant-interactive-worker"
+      },
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000003",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 3,
+      "logicalTimeMillis": 0,
+      "source": "RUN_COORDINATOR",
+      "kind": "GARDEN.TICK_REQUESTED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "READY",
+        "stepId": null,
+        "stepNo": 0
+      },
+      "payload": {
+        "commandId": "tick-init",
+        "expectedSequence": 2,
+        "kind": "TICK",
+        "phase": "READY",
+        "workerTicks": 0
+      },
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000004",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 4,
+      "logicalTimeMillis": 0,
+      "source": "FLOWER_LISTENER",
+      "kind": "FLOWER.FLOW_SUBMITTED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "READY",
+        "stepId": null,
+        "stepNo": 0
+      },
+      "payload": {},
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000005",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 5,
+      "logicalTimeMillis": 0,
+      "source": "FLOWER_STEP",
+      "kind": "VERDANT.WAIT_STARTED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "wait-for-yard-assignment",
+        "stepNo": 0
+      },
+      "payload": {
+        "checkPrecedence": "SIGNAL_THEN_TIMEOUT",
+        "deadlineMillis": 30000,
+        "signalName": "yard-assignment",
+        "startedAtMillis": 0,
+        "timeoutMillis": 30000
+      },
+      "evidence": [
+        {
+          "type": "SOURCE",
+          "ref": "VerdantFlowFactory.WaitForYardAssignmentStep.onTick",
+          "label": "The Step checks hasSignal before timedOut and returns the recorded StepResult."
+        },
+        {
+          "type": "TEST",
+          "ref": "VerdantRunCoordinatorTest.sameTickUsesExplicitSignalFirstStepPolicyRegardlessOfInputCommandOrder",
+          "label": "Both predicates are true on the same deterministic Worker tick."
+        }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000006",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 6,
+      "logicalTimeMillis": 0,
+      "source": "FLOWER_LISTENER",
+      "kind": "FLOWER.STEP_ENTERED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "wait-for-yard-assignment",
+        "stepNo": 0
+      },
+      "payload": {},
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000007",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 7,
+      "logicalTimeMillis": 0,
+      "source": "FLOWER_STEP",
+      "kind": "VERDANT.WAIT_EVALUATED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "wait-for-yard-assignment",
+        "stepNo": 0
+      },
+      "payload": {
+        "checkPrecedence": "SIGNAL_THEN_TIMEOUT",
+        "elapsedMillis": 0,
+        "returnedStepResult": "STAY",
+        "selectedPath": "WAITING",
+        "signalPresent": false,
+        "stepTick": 1,
+        "timedOut": false,
+        "winner": "NONE"
+      },
+      "evidence": [
+        {
+          "type": "SOURCE",
+          "ref": "VerdantFlowFactory.WaitForYardAssignmentStep.onTick",
+          "label": "The Step checks hasSignal before timedOut and returns the recorded StepResult."
+        },
+        {
+          "type": "TEST",
+          "ref": "VerdantRunCoordinatorTest.sameTickUsesExplicitSignalFirstStepPolicyRegardlessOfInputCommandOrder",
+          "label": "Both predicates are true on the same deterministic Worker tick."
+        }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000008",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 8,
+      "logicalTimeMillis": 0,
+      "source": "FLOWER_STEP",
+      "kind": "FLOWER.STEP_RESULT",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "wait-for-yard-assignment",
+        "stepNo": 0
+      },
+      "payload": {
+        "observations": {
+          "checkPrecedence": "SIGNAL_THEN_TIMEOUT",
+          "elapsedMillis": 0,
+          "returnedStepResult": "STAY",
+          "selectedPath": "WAITING",
+          "signalPresent": false,
+          "stepTick": 1,
+          "timedOut": false,
+          "winner": "NONE"
+        },
+        "result": "STAY",
+        "stepNo": 0,
+        "stepTick": 1
+      },
+      "evidence": [
+        {
+          "type": "SOURCE",
+          "ref": "flower-core:Flow.applyResult",
+          "label": "Flower applies this actual StepResult to select the next Step or finish."
+        },
+        {
+          "type": "TEST",
+          "ref": "VerdantRunCoordinatorTest.sameTickUsesExplicitSignalFirstStepPolicyRegardlessOfInputCommandOrder",
+          "label": "The deterministic both-true test verifies the mission Step's policy."
+        }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000009",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 9,
+      "logicalTimeMillis": 0,
+      "source": "RUN_COORDINATOR",
+      "kind": "GARDEN.TICK_COMPLETED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "wait-for-yard-assignment",
+        "stepNo": 0
+      },
+      "payload": {
+        "afterPhase": "RUNNING",
+        "afterStepId": "wait-for-yard-assignment",
+        "beforePhase": "READY",
+        "beforeStepId": null,
+        "commandId": "tick-init",
+        "workerTick": 1
+      },
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000010",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 10,
+      "logicalTimeMillis": 0,
+      "source": "RUN_COORDINATOR",
+      "kind": "GARDEN.TIME_ADVANCE_REQUESTED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "wait-for-yard-assignment",
+        "stepNo": 0
+      },
+      "payload": {
+        "beforeMillis": 0,
+        "commandId": "advance-deadline",
+        "expectedSequence": 9,
+        "kind": "ADVANCE_TIME",
+        "millis": 30000,
+        "phase": "RUNNING",
+        "workerTicks": 1
+      },
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000011",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 11,
+      "logicalTimeMillis": 30000,
+      "source": "RUN_COORDINATOR",
+      "kind": "GARDEN.TIME_ADVANCED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "wait-for-yard-assignment",
+        "stepNo": 0
+      },
+      "payload": {
+        "afterMillis": 30000,
+        "beforeMillis": 0,
+        "commandId": "advance-deadline",
+        "deadlineMillis": 30000,
+        "deadlineReached": true,
+        "millis": 30000
+      },
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000012",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 12,
+      "logicalTimeMillis": 30000,
+      "source": "RUN_COORDINATOR",
+      "kind": "GARDEN.TICK_REQUESTED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "wait-for-yard-assignment",
+        "stepNo": 0
+      },
+      "payload": {
+        "commandId": "tick-timeout",
+        "expectedSequence": 11,
+        "kind": "TICK",
+        "phase": "RUNNING",
+        "workerTicks": 1
+      },
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000013",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 13,
+      "logicalTimeMillis": 30000,
+      "source": "FLOWER_STEP",
+      "kind": "VERDANT.WAIT_EVALUATED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "wait-for-yard-assignment",
+        "stepNo": 0
+      },
+      "payload": {
+        "checkPrecedence": "SIGNAL_THEN_TIMEOUT",
+        "elapsedMillis": 30000,
+        "returnedStepResult": "GOTO",
+        "selectedPath": "timed-out",
+        "signalPresent": false,
+        "stepTick": 2,
+        "targetStepId": "timed-out",
+        "timedOut": true,
+        "winner": "TIMEOUT"
+      },
+      "evidence": [
+        {
+          "type": "SOURCE",
+          "ref": "VerdantFlowFactory.WaitForYardAssignmentStep.onTick",
+          "label": "The Step checks hasSignal before timedOut and returns the recorded StepResult."
+        },
+        {
+          "type": "TEST",
+          "ref": "VerdantRunCoordinatorTest.sameTickUsesExplicitSignalFirstStepPolicyRegardlessOfInputCommandOrder",
+          "label": "Both predicates are true on the same deterministic Worker tick."
+        }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000014",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 14,
+      "logicalTimeMillis": 30000,
+      "source": "FLOWER_STEP",
+      "kind": "VERDANT.WAIT_DECIDED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "wait-for-yard-assignment",
+        "stepNo": 0
+      },
+      "payload": {
+        "checkPrecedence": "SIGNAL_THEN_TIMEOUT",
+        "elapsedMillis": 30000,
+        "returnedStepResult": "GOTO",
+        "selectedPath": "timed-out",
+        "signalPresent": false,
+        "stepTick": 2,
+        "targetStepId": "timed-out",
+        "timedOut": true,
+        "winner": "TIMEOUT"
+      },
+      "evidence": [
+        {
+          "type": "SOURCE",
+          "ref": "VerdantFlowFactory.WaitForYardAssignmentStep.onTick",
+          "label": "The Step checks hasSignal before timedOut and returns the recorded StepResult."
+        },
+        {
+          "type": "TEST",
+          "ref": "VerdantRunCoordinatorTest.sameTickUsesExplicitSignalFirstStepPolicyRegardlessOfInputCommandOrder",
+          "label": "Both predicates are true on the same deterministic Worker tick."
+        }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000015",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 15,
+      "logicalTimeMillis": 30000,
+      "source": "FLOWER_STEP",
+      "kind": "FLOWER.STEP_RESULT",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "wait-for-yard-assignment",
+        "stepNo": 0
+      },
+      "payload": {
+        "observations": {
+          "checkPrecedence": "SIGNAL_THEN_TIMEOUT",
+          "elapsedMillis": 30000,
+          "returnedStepResult": "GOTO",
+          "selectedPath": "timed-out",
+          "signalPresent": false,
+          "stepTick": 2,
+          "targetStepId": "timed-out",
+          "timedOut": true,
+          "winner": "TIMEOUT"
+        },
+        "result": "GOTO",
+        "stepNo": 0,
+        "stepTick": 2,
+        "targetStepId": "timed-out"
+      },
+      "evidence": [
+        {
+          "type": "SOURCE",
+          "ref": "flower-core:Flow.applyResult",
+          "label": "Flower applies this actual StepResult to select the next Step or finish."
+        },
+        {
+          "type": "TEST",
+          "ref": "VerdantRunCoordinatorTest.sameTickUsesExplicitSignalFirstStepPolicyRegardlessOfInputCommandOrder",
+          "label": "The deterministic both-true test verifies the mission Step's policy."
+        }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000016",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 16,
+      "logicalTimeMillis": 30000,
+      "source": "FLOWER_LISTENER",
+      "kind": "FLOWER.STEP_EXITED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "wait-for-yard-assignment",
+        "stepNo": 0
+      },
+      "payload": {},
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000017",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 17,
+      "logicalTimeMillis": 30000,
+      "source": "RUN_COORDINATOR",
+      "kind": "GARDEN.TICK_COMPLETED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "timed-out",
+        "stepNo": 0
+      },
+      "payload": {
+        "afterPhase": "RUNNING",
+        "afterStepId": "timed-out",
+        "beforePhase": "RUNNING",
+        "beforeStepId": "wait-for-yard-assignment",
+        "commandId": "tick-timeout",
+        "workerTick": 2
+      },
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000018",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 18,
+      "logicalTimeMillis": 30000,
+      "source": "RUN_COORDINATOR",
+      "kind": "GARDEN.SIGNAL_SEND_REQUESTED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "timed-out",
+        "stepNo": 0
+      },
+      "payload": {
+        "commandId": "late-signal",
+        "expectedSequence": 17,
+        "kind": "SEND_SIGNAL",
+        "name": "yard-assignment",
+        "phase": "RUNNING",
+        "waitStepActive": false,
+        "workerTicks": 2
+      },
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000019",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 19,
+      "logicalTimeMillis": 30000,
+      "source": "RUN_COORDINATOR",
+      "kind": "GARDEN.SIGNAL_IGNORED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "timed-out",
+        "stepNo": 0
+      },
+      "payload": {
+        "commandId": "late-signal",
+        "deliveredToWait": false,
+        "name": "yard-assignment",
+        "publishedAtMillis": 30000,
+        "reason": "WAIT_STEP_NOT_ACTIVE"
+      },
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000020",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 20,
+      "logicalTimeMillis": 30000,
+      "source": "RUN_COORDINATOR",
+      "kind": "GARDEN.TICK_REQUESTED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "timed-out",
+        "stepNo": 0
+      },
+      "payload": {
+        "commandId": "tick-route",
+        "expectedSequence": 19,
+        "kind": "TICK",
+        "phase": "RUNNING",
+        "workerTicks": 2
+      },
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000021",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 21,
+      "logicalTimeMillis": 30000,
+      "source": "FLOWER_LISTENER",
+      "kind": "FLOWER.STEP_ENTERED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "timed-out",
+        "stepNo": 0
+      },
+      "payload": {},
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000022",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 22,
+      "logicalTimeMillis": 30000,
+      "source": "FLOWER_STEP",
+      "kind": "VERDANT.ROUTE_COMMITTED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "timed-out",
+        "stepNo": 0
+      },
+      "payload": {
+        "resultingState": "TIMED_OUT",
+        "selectedPath": "timed-out",
+        "winner": "TIMEOUT"
+      },
+      "evidence": [
+        {
+          "type": "SOURCE",
+          "ref": "VerdantFlowFactory.WaitForYardAssignmentStep.onTick",
+          "label": "The Step checks hasSignal before timedOut and returns the recorded StepResult."
+        },
+        {
+          "type": "TEST",
+          "ref": "VerdantRunCoordinatorTest.sameTickUsesExplicitSignalFirstStepPolicyRegardlessOfInputCommandOrder",
+          "label": "Both predicates are true on the same deterministic Worker tick."
+        }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000023",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 23,
+      "logicalTimeMillis": 30000,
+      "source": "FLOWER_STEP",
+      "kind": "FLOWER.STEP_RESULT",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "timed-out",
+        "stepNo": 0
+      },
+      "payload": {
+        "observations": {
+          "selectedPath": "timed-out",
+          "winner": "TIMEOUT"
+        },
+        "result": "FINISH",
+        "stepNo": 0,
+        "stepTick": 1
+      },
+      "evidence": [
+        {
+          "type": "SOURCE",
+          "ref": "flower-core:Flow.applyResult",
+          "label": "Flower applies this actual StepResult to select the next Step or finish."
+        },
+        {
+          "type": "TEST",
+          "ref": "VerdantRunCoordinatorTest.sameTickUsesExplicitSignalFirstStepPolicyRegardlessOfInputCommandOrder",
+          "label": "The deterministic both-true test verifies the mission Step's policy."
+        }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000024",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 24,
+      "logicalTimeMillis": 30000,
+      "source": "FLOWER_LISTENER",
+      "kind": "FLOWER.STEP_EXITED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "RUNNING",
+        "stepId": "timed-out",
+        "stepNo": 0
+      },
+      "payload": {},
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000025",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 25,
+      "logicalTimeMillis": 30000,
+      "source": "FLOWER_LISTENER",
+      "kind": "FLOWER.FLOW_FINISHED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "FINISHED",
+        "stepId": null,
+        "stepNo": 0
+      },
+      "payload": {},
+      "evidence": []
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "eventId": "canonical-verdant-timeout-first:000026",
+      "runId": "canonical-verdant-timeout-first",
+      "sequence": 26,
+      "logicalTimeMillis": 30000,
+      "source": "RUN_COORDINATOR",
+      "kind": "GARDEN.TICK_COMPLETED",
+      "flow": {
+        "type": "signal-vs-timeout",
+        "key": "canonical-verdant-timeout-first",
+        "state": "FINISHED",
+        "stepId": null,
+        "stepNo": 0
+      },
+      "payload": {
+        "afterPhase": "FINISHED",
+        "afterStepId": null,
+        "beforePhase": "RUNNING",
+        "beforeStepId": "timed-out",
+        "commandId": "tick-route",
+        "workerTick": 3
+      },
+      "evidence": []
+    }
+  ],
+  "evidence": [
+    {
+      "type": "CONTRACT",
+      "ref": "signal-vs-timeout.flower-is-source-of-truth",
+      "label": "Commands create inputs; the actual Flower StepResult selects the route."
+    },
+    {
+      "type": "CONTRACT",
+      "ref": "signal-vs-timeout.signal-is-a-wake-up-hint",
+      "label": "The event callback sets a Flower signal, while onTick decides the transition."
+    },
+    {
+      "type": "CONTRACT",
+      "ref": "signal-vs-timeout.signal-first-precedence",
+      "label": "When both predicates are true, this mission Step checks Signal before Timeout."
+    },
+    {
+      "type": "CONTRACT",
+      "ref": "signal-vs-timeout.exited-wait-cannot-reopen",
+      "label": "A later Signal is ignored after Flower exits the waiting Step."
+    },
+    {
+      "type": "SOURCE",
+      "ref": "VerdantFlowFactory.WaitForYardAssignmentStep.onTick",
+      "label": "Contains the explicit SIGNAL_THEN_TIMEOUT predicate order and returned StepResult."
+    },
+    {
+      "type": "SOURCE",
+      "ref": "flower-core:StepContext.startTimeout",
+      "label": "Starts the actual transient Flower timeout from the ManualClock."
+    },
+    {
+      "type": "SOURCE",
+      "ref": "flower-core:StepContext.hasSignal",
+      "label": "Reads the actual Step-local Flower signal on a Worker tick."
+    },
+    {
+      "type": "SOURCE",
+      "ref": "flower-core:Flow.applyResult",
+      "label": "Applies GOTO and FINISH results inside the Flower runtime."
+    },
+    {
+      "type": "TEST",
+      "ref": "VerdantRunCoordinatorTest.signalBeforeDeadlineSelectsYardMove",
+      "label": "Verifies the signal-first timeline without sleeps."
+    },
+    {
+      "type": "TEST",
+      "ref": "VerdantRunCoordinatorTest.timeoutBeforeSignalSelectsTimeoutAndLateSignalCannotReopenWait",
+      "label": "Verifies timeout selection and ignored late Signal."
+    },
+    {
+      "type": "TEST",
+      "ref": "VerdantRunCoordinatorTest.timeoutBoundaryIsInclusiveAtThirtySeconds",
+      "label": "Verifies 29,999ms stays waiting and 30,000ms observes timedOut=true."
+    },
+    {
+      "type": "TEST",
+      "ref": "VerdantRunCoordinatorTest.sameTickUsesExplicitSignalFirstStepPolicyRegardlessOfInputCommandOrder",
+      "label": "Verifies both predicates true selects Signal because of mission Step source order."
+    },
+    {
+      "type": "TEST",
+      "ref": "VerdantRunCoordinatorTest.commandsAreStrictOptimisticAndIdempotent",
+      "label": "Verifies payload validation, expected sequence, and command retry semantics."
+    },
+    {
+      "type": "TEST",
+      "ref": "VerdantRunControllerTest.exposesCreateAndAllThreeCommandKinds",
+      "label": "Verifies the HTTP wire contract for create, time, Signal, and tick."
+    }
+  ],
+  "expectedOutcome": {
+    "finalSequence": 26,
+    "status": "COMPLETED",
+    "finalState": "TIMED_OUT",
+    "workerTicks": 3,
+    "winner": "TIMEOUT"
+  }
+}

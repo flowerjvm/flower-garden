@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://flowerjvm.dev/flower-garden/contracts/run-command.schema.json",
-  "title": "Flower Garden v1 Run Command",
-  "description": "One idempotent First Bloom TICK command applied by the JVM coordinator.",
+  "title": "Flower Garden Run Command",
+  "description": "One versioned, idempotent player command applied by the JVM coordinator.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -28,12 +28,71 @@
       "minimum": 1
     },
     "kind": {
-      "const": "TICK"
+      "enum": [
+        "TICK",
+        "ADVANCE_TIME",
+        "SEND_SIGNAL"
+      ]
     },
     "payload": {
-      "type": "object",
-      "additionalProperties": false,
-      "maxProperties": 0
+      "type": "object"
     }
-  }
+  },
+  "oneOf": [
+    {
+      "title": "Worker tick",
+      "properties": {
+        "kind": {
+          "const": "TICK"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "maxProperties": 0
+        }
+      }
+    },
+    {
+      "title": "Advance the run's ManualClock",
+      "properties": {
+        "kind": {
+          "const": "ADVANCE_TIME"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "millis"
+          ],
+          "properties": {
+            "millis": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300000
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Publish Verdant's yard-assignment event",
+      "properties": {
+        "kind": {
+          "const": "SEND_SIGNAL"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "const": "yard-assignment"
+            }
+          }
+        }
+      }
+    }
+  ]
 }

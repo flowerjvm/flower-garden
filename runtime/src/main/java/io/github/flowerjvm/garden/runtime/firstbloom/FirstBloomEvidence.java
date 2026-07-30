@@ -34,7 +34,7 @@ final class FirstBloomEvidence {
                         "Verifies prepare-soil STAY, then DONE, grow-stem DONE, bloom DONE, and FINISHED."),
                 test(
                         "FirstBloomRunCoordinatorTest.commandIdMakesTickRetryIdempotent",
-                        "Verifies a retried command id does not tick Flower twice."),
+                        "Verifies an exact retry does not tick twice and changed content with the same id is rejected."),
                 test(
                         "FirstBloomRunControllerTest.exposesReadyRunAndTickCommand",
                         "Verifies the HTTP create-and-tick contract."),
@@ -43,7 +43,7 @@ final class FirstBloomEvidence {
                         "Verifies required command fields, URL run identity, and optimistic sequence checks."),
                 test(
                         "FirstBloomRunControllerTest.duplicateCommandIdReturnsSameResponseWithoutAnotherTick",
-                        "Verifies HTTP retries with one command id return the original response without another tick."));
+                        "Verifies exact HTTP retries return the original response and command-id collisions are rejected."));
     }
 
     private static TraceEvent.EvidenceReference contract(String ref, String label) {

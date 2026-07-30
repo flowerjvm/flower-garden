@@ -51,28 +51,48 @@ StepResult. A flower animation alone never proves completion.
 
 ## 02. Verdant Signal Garden
 
-Status: **PLANNED · LOCKED**
+Status: **AVAILABLE**
 
 Mission: **Signal vs Timeout**
 
-This mission has no executable runtime commands or canonical trace in v1. It
-will be unlocked only after its real Flower Flow, tests, projection, and
-evidence are implemented.
+```text
+Event → Signal → StepContext → ManualClock → StepResult
+```
 
-The intended lesson is more precise than “the lowest sequence wins”:
+The player first arms a real `wait-for-yard-assignment` Step. That Step starts
+a 30-second timeout and subscribes to the mission event. The player then
+predicts which predicates the next tick will observe, changes the real run's
+`ManualClock`, optionally publishes the real event, and asks the Flower Worker
+to tick. The actual Step policy and `StepResult` then reveal the winner.
 
-1. Signal publication and logical time advancement create inputs.
-2. On a real Worker tick, the waiting mission Step checks
+Three deterministic scenarios isolate the important distinctions:
+
+| Scenario | Inputs before the deciding tick | Actual policy/result |
+| --- | --- | --- |
+| Signal at 29 seconds | Signal true, timeout false | `GOTO yard-move` |
+| Timeout at 30 seconds | Signal false, timeout true | `GOTO timed-out` |
+| Both ready at 30 seconds | Signal true, timeout true | `SIGNAL_THEN_TIMEOUT`, so `GOTO yard-move` |
+
+The intended lesson is more precise than “the lowest trace sequence wins”:
+
+1. `ADVANCE_TIME` changes the actual per-run `ManualClock`; it does not tick
+   Flower.
+2. `SEND_SIGNAL` publishes the actual subscribed event. Its callback marks the
+   Step's Signal, but does not select a route.
+3. On the next real `Worker.tickOnce()`, the waiting mission Step reads
    `hasSignal(...)` and `timedOut()`.
-3. The Step's explicit check order defines precedence if both predicates are
-   true.
-4. The Step returns the StepResult that selects the downstream path.
-5. Flower applies that result; a later input cannot reopen the exited wait.
+4. If both are true, this Flow definition's explicit
+   `SIGNAL_THEN_TIMEOUT` check order decides precedence.
+5. The Step returns the real `StepResult` that selects `yard-move` or
+   `timed-out`; Flower applies that result.
+6. Exiting the waiting Step disposes its subscription. A later Signal is
+   recorded as ignored and cannot reopen that completed wait.
 
 Trace sequence explains when commands and observations were recorded. The
-actual mission Step decision explains the winner. The future result panel must
-cite that Step source and deterministic tests, including a case where both
-predicates are true on the same tick.
+`VERDANT.WAIT_EVALUATED` and `VERDANT.WAIT_DECIDED` records explain the
+decision that the actual mission Step made. The result panel links that
+decision to its Step source and deterministic Signal-first, Timeout-first, and
+both-true tests.
 
 ## Why core-first
 
@@ -82,7 +102,7 @@ StepResult at once. That recreates the recognition debt the game is intended to
 reduce.
 
 **The First Flow** makes Engine, Worker, Flow, Step, and StepResult concrete
-first. **Signal vs Timeout** can later focus on input timing and explicit Flow
+first. **Signal vs Timeout** then focuses on input timing and explicit Flow
 policy instead of reteaching the execution hierarchy.
 
 ## Growth rule

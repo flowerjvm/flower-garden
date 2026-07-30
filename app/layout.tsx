@@ -4,7 +4,7 @@ import "./globals.css";
 
 const title = "Flower Garden · First Bloom Meadow";
 const description =
-  "실제 Flower Runtime의 Flow, Step, StepResult를 3D 정원에서 실행하며 배우는 마이크로월드.";
+  "실제 Flower Runtime의 Flow, Step, Signal, Timeout을 3D 정원에서 실행하며 배우는 마이크로월드.";
 
 function firstForwardedValue(value: string | null): string | undefined {
   return value?.split(",")[0]?.trim() || undefined;
@@ -42,6 +42,8 @@ export async function generateMetadata(): Promise<Metadata> {
       "Flow",
       "Step",
       "StepResult",
+      "Signal",
+      "Timeout",
       "workflow learning",
     ],
     openGraph: {

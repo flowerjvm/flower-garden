@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 class FirstBloomRunCoordinatorTest {
 
@@ -83,6 +84,12 @@ class FirstBloomRunCoordinatorTest {
         assertThat(coordinator.workerTicks(created.runId())).isEqualTo(1);
         assertThat(retry).isEqualTo(first);
         assertThat(retry.events()).hasSameSizeAs(first.events());
+
+        RunCommand collision = tick(first, "same-command");
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> coordinator.execute(created.runId(), collision))
+                .withMessageContaining("already used with different command content");
+        assertThat(coordinator.workerTicks(created.runId())).isEqualTo(1);
     }
 
     private RunCommand tick(RunView current, String commandId) {

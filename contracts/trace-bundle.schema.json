@@ -32,6 +32,9 @@
     "missionId": {
       "$ref": "trace-event.schema.json#/$defs/slug"
     },
+    "scenarioId": {
+      "$ref": "trace-event.schema.json#/$defs/slug"
+    },
     "flowerVersion": {
       "const": "0.1.1"
     },
@@ -46,6 +49,12 @@
       "minItems": 1,
       "items": {
         "$ref": "trace-event.schema.json"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "trace-event.schema.json#/$defs/evidence"
       }
     },
     "expectedOutcome": {
@@ -76,6 +85,12 @@
         "workerTicks": {
           "type": "integer",
           "minimum": 0
+        },
+        "winner": {
+          "enum": [
+            "SIGNAL",
+            "TIMEOUT"
+          ]
         }
       }
     }

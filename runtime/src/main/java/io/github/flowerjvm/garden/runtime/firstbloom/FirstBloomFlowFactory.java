@@ -5,6 +5,7 @@ import io.github.flowerjvm.flower.core.step.Step;
 import io.github.flowerjvm.flower.core.step.StepContext;
 import io.github.flowerjvm.flower.core.step.StepResult;
 import io.github.flowerjvm.garden.runtime.api.TraceEvent;
+import io.github.flowerjvm.garden.runtime.support.MissionTraceRecorder;
 
 import java.util.List;
 import java.util.Map;

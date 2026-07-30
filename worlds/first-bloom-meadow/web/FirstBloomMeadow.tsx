@@ -1,6 +1,7 @@
 "use client";
 
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import recordedTraceBundle from "../../../contracts/fixtures/first-bloom-the-first-flow.trace.json";
 import {
   createFirstBloomRun,
@@ -766,15 +767,19 @@ export function FirstBloomMeadow() {
           </div>
           <span className="world-status">PLAYING</span>
         </article>
-        <article className="world-card is-next">
+        <Link
+          className="world-card is-next is-available"
+          href="/worlds/verdant-signal-garden"
+          aria-label="두 번째 월드 Verdant Signal Garden 열기"
+        >
           <span className="world-number">02</span>
           <div>
-            <small>다음 월드</small>
+            <small>두 번째 월드</small>
             <h3>Verdant Signal Garden</h3>
             <p>Signal vs Timeout · 시간과 경쟁</p>
           </div>
-          <span className="world-status">NEXT</span>
-        </article>
+          <span className="world-status">ENTER</span>
+        </Link>
       </section>
     </main>
   );

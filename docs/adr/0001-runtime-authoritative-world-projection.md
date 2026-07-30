@@ -31,7 +31,7 @@ Flower Garden
 ├─ 01 First Bloom Meadow              AVAILABLE
 │  └─ The First Flow
 │     Engine → Worker → Flow → Step → StepResult
-└─ 02 Verdant Signal Garden           PLANNED · LOCKED
+└─ 02 Verdant Signal Garden           AVAILABLE
    └─ Signal vs Timeout
 ```
 
@@ -42,10 +42,10 @@ Flower Garden
 The current live path is:
 
 ```text
-Browser TICK intent
+Browser command intent
     ↓ POST command
-FirstBloomRunCoordinator
-    ↓ exactly one Worker.tickOnce()
+Mission run coordinator
+    ↓ actual ManualClock, EventBus, or Worker operation
 Flower Engine → Worker → Flow → Step → StepResult
     ↓ runtime-side trace recording
 Cumulative ordered TraceEvent list
@@ -130,9 +130,9 @@ The recorder assigns a unique immutable `eventId` and a contiguous `sequence`
 starting at `1`. Sequence is the only trace order. Logical time is data and is
 not a tie-breaker.
 
-### 4. v1 exposes two cumulative-trace POST operations
+### 4. The first slice established cumulative-trace POST operations
 
-The implemented Java 17 Spring Boot gateway exposes:
+The Java 17 Spring Boot gateway began with:
 
 ```text
 POST /api/v1/worlds/first-bloom-meadow/runs
@@ -142,7 +142,7 @@ POST /api/v1/runs/{runId}/commands
 Both return the same cumulative `RunView` shape. `events` always contains the
 complete trace from sequence `1` through the latest event.
 
-The command contract requires:
+The First Bloom command contract requires:
 
 - `schemaVersion: "1.0.0"`;
 - a non-empty `commandId`;
@@ -155,9 +155,26 @@ The per-run coordinator serializes commands. Retrying an already successful
 `commandId` returns the original response and does not tick Flower again.
 `expectedSequence` rejects a stale or speculative next action.
 
-The current API intentionally has no event GET endpoint and no SSE stream. A
+The API intentionally has no event GET endpoint and no SSE stream. A
 cumulative response is enough for the first local vertical slice and keeps the
 authority boundary testable without introducing an unneeded transport layer.
+
+Verdant adds a second run factory:
+
+```text
+POST /api/v1/worlds/verdant-signal-garden/runs
+```
+
+It reuses the same command envelope and cumulative `RunView`. Its allowed
+commands are strict variants:
+
+- `TICK {}` calls the run's `Worker.tickOnce()` once;
+- `ADVANCE_TIME {"millis": 1..300000}` advances the run's actual
+  `ManualClock` without ticking;
+- `SEND_SIGNAL {"name":"yard-assignment"}` publishes the actual subscribed
+  mission event.
+
+Idempotency and optimistic sequence checks apply equally to all three.
 
 ### 5. Projection replay is not runtime recovery
 
@@ -171,11 +188,11 @@ first mission.
 
 ### 6. Worlds use minimal compile-time manifests
 
-The current catalog has one executable entry and one locked plan:
+The current catalog has two executable entries:
 
 ```text
 first-bloom-meadow       AVAILABLE
-verdant-signal-garden    PLANNED
+verdant-signal-garden    AVAILABLE
 ```
 
 The manifests provide identifiers, display names, learning objectives, status,
@@ -188,17 +205,17 @@ The shared runtime currently lives in the Maven module `runtime/`; it is not
 duplicated inside each world directory. Stable module boundaries should be
 extracted only after more playable worlds reveal actual duplication.
 
-### 7. Signal/Timeout precedence is future mission policy
+### 7. Signal/Timeout precedence is explicit mission policy
 
-Verdant Signal Garden is not executable in v1. Its future lesson must not teach
-that Flower has a generic “first trace sequence wins” Signal/Timeout arbiter.
+Verdant Signal Garden does not teach that Flower has a generic “first trace
+sequence wins” Signal/Timeout arbiter.
 
 Flower exposes Step-local Signal and timeout observations. A mission Step
 decides what to do by checking the real `StepContext` and returning a real
 `StepResult`. If both `hasSignal(...)` and `timedOut()` are true on the same
 tick, the mission Step's explicit check order is the precedence policy.
 
-The future trace must therefore record, from inside that real Step:
+The trace therefore records, from inside that real Step:
 
 - whether the Signal was present;
 - whether the timeout predicate was true;
@@ -206,18 +223,18 @@ The future trace must therefore record, from inside that real Step:
 - the returned `StepResult`;
 - the selected downstream Step.
 
-Trace sequence will explain the order in which inputs and commands were
-recorded. The Step decision event and its source/test evidence will explain the
-winner. Once Flower applies the StepResult and exits the waiting Step, a later
-Signal or deadline observation cannot reopen that completed wait; any
-“rejected” label is mission-level explanation unless Flower exposes such a core
-event explicitly.
+Trace sequence explains the order in which inputs and commands were recorded.
+`VERDANT.WAIT_EVALUATED` records both predicates and the declared
+`SIGNAL_THEN_TIMEOUT` check order. `VERDANT.WAIT_DECIDED`, the real
+`FLOWER.STEP_RESULT`, and their source/test evidence explain the winner. Once
+Flower applies the StepResult and exits the waiting Step, a later Signal cannot
+reopen that completed wait. `VERDANT.TIMEOUT_REJECTED` is deliberately a
+mission-level explanation, not a Flower core event.
 
 ## Future work, not v1 architecture
 
 The following require a later mission or demonstrated scale:
 
-- `ADVANCE_TIME`, `SEND_SIGNAL`, and timeout commands;
 - polling endpoints and SSE delivery;
 - reconnect and gap catch-up protocols;
 - a durable or database-backed trace journal;
@@ -236,7 +253,8 @@ implemented merely because a hypothetical world might need it.
 - Every visible core transition is backed by an actual Flower run.
 - One command maps to one Worker tick, so the learning model matches Flower.
 - The cumulative response is simple to inspect, replay, and test.
-- A second world can be planned without pretending its runtime exists.
+- A second world reuses the proven boundary without introducing a browser-side
+  Signal/Timeout simulator.
 
 ### Costs
 
@@ -275,4 +293,8 @@ The current vertical slice must pass:
 3. a canonical trace whose event order matches the runtime;
 4. JSON parsing and cross-event checks for contiguous sequence, stable run
    identity, and final sequence;
-5. web build and replay smoke tests.
+5. deterministic Signal-first, Timeout-first, and both-true tests;
+6. byte-for-byte comparison of generated runtime responses with checked-in
+   Verdant replay bundles;
+7. projection reducer tests for all three outcomes and unknown event kinds;
+8. web build and replay smoke tests for both routes.

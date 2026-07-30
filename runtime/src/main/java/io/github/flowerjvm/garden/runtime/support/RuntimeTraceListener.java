@@ -1,4 +1,4 @@
-package io.github.flowerjvm.garden.runtime.firstbloom;
+package io.github.flowerjvm.garden.runtime.support;
 
 import io.github.flowerjvm.flower.core.flow.FlowSnapshot;
 import io.github.flowerjvm.flower.core.listener.FlowerListener;
@@ -8,14 +8,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Records only immutable lifecycle facts and returns immediately to Flower's
- * Worker thread.
+ * Records immutable lifecycle facts and returns immediately to Flower's Worker
+ * thread.
  */
-final class RuntimeTraceListener implements FlowerListener {
+public final class RuntimeTraceListener implements FlowerListener {
 
     private final MissionTraceRecorder recorder;
 
-    RuntimeTraceListener(MissionTraceRecorder recorder) {
+    public RuntimeTraceListener(MissionTraceRecorder recorder) {
         this.recorder = recorder;
     }
 
@@ -73,7 +73,7 @@ final class RuntimeTraceListener implements FlowerListener {
     }
 
     private void record(
-            String type,
+            String kind,
             FlowSnapshot flow,
             String stepId,
             Throwable cause
@@ -84,7 +84,7 @@ final class RuntimeTraceListener implements FlowerListener {
         }
         recorder.append(
                 TraceEvent.Source.FLOWER_LISTENER,
-                type,
+                kind,
                 flowReference(flow, stepId),
                 payload);
     }

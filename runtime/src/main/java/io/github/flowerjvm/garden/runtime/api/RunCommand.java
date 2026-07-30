@@ -26,7 +26,6 @@ public record RunCommand(
     public enum CommandKind {
         TICK,
         ADVANCE_TIME,
-        SEND_SIGNAL,
-        ADVANCE_TO_TIMEOUT
+        SEND_SIGNAL
     }
 }

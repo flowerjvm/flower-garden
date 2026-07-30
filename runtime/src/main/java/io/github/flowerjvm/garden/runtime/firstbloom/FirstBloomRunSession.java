@@ -10,6 +10,8 @@ import io.github.flowerjvm.flower.core.worker.Worker;
 import io.github.flowerjvm.garden.runtime.api.RunCommand;
 import io.github.flowerjvm.garden.runtime.api.RunView;
 import io.github.flowerjvm.garden.runtime.api.TraceEvent;
+import io.github.flowerjvm.garden.runtime.support.MissionTraceRecorder;
+import io.github.flowerjvm.garden.runtime.support.RuntimeTraceListener;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -28,7 +30,7 @@ final class FirstBloomRunSession {
     private final Engine engine;
     private final Flow flow;
     private final ReentrantLock commandLock = new ReentrantLock();
-    private final Map<String, RunView> responsesByCommandId = new LinkedHashMap<>();
+    private final Map<String, CommandReceipt> receiptsByCommandId = new LinkedHashMap<>();
     private int workerTicks;
 
     private FirstBloomRunSession(
@@ -88,8 +90,14 @@ final class FirstBloomRunSession {
         try {
             validateCommand(command);
             String commandId = command.commandId();
-            if (responsesByCommandId.containsKey(commandId)) {
-                return responsesByCommandId.get(commandId);
+            CommandReceipt existing = receiptsByCommandId.get(commandId);
+            if (existing != null) {
+                if (!existing.command().equals(command)) {
+                    throw new IllegalArgumentException(
+                            "commandId was already used with different command content: "
+                                    + commandId);
+                }
+                return existing.response();
             }
             if (command.expectedSequence() != recorder.lastSequence()) {
                 throw new IllegalArgumentException(
@@ -123,7 +131,7 @@ final class FirstBloomRunSession {
                     completedDetails);
 
             RunView response = buildView();
-            responsesByCommandId.put(commandId, response);
+            receiptsByCommandId.put(commandId, new CommandReceipt(command, response));
             return response;
         } finally {
             commandLock.unlock();
@@ -239,5 +247,8 @@ final class FirstBloomRunSession {
         if (!command.payload().isEmpty()) {
             throw new IllegalArgumentException("TICK payload must be empty");
         }
+    }
+
+    private record CommandReceipt(RunCommand command, RunView response) {
     }
 }

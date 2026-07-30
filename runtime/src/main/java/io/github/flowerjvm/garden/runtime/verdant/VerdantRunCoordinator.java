@@ -1,4 +1,4 @@
-package io.github.flowerjvm.garden.runtime.firstbloom;
+package io.github.flowerjvm.garden.runtime.verdant;
 
 import io.github.flowerjvm.garden.runtime.api.RunCommand;
 import io.github.flowerjvm.garden.runtime.api.RunNotFoundException;
@@ -11,26 +11,26 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
- * Owns the in-memory registry of actual Flower runtime sessions.
+ * In-memory registry for authoritative Verdant Flower experiment sessions.
  */
 @Service
-public final class FirstBloomRunCoordinator {
+public final class VerdantRunCoordinator {
 
-    private final Map<String, FirstBloomRunSession> sessions = new ConcurrentHashMap<>();
+    private final Map<String, VerdantRunSession> sessions = new ConcurrentHashMap<>();
     private final Supplier<String> runIdFactory;
 
-    public FirstBloomRunCoordinator() {
-        this(() -> UUID.randomUUID().toString());
+    public VerdantRunCoordinator() {
+        this(() -> "verdant-" + UUID.randomUUID());
     }
 
-    FirstBloomRunCoordinator(Supplier<String> runIdFactory) {
+    VerdantRunCoordinator(Supplier<String> runIdFactory) {
         this.runIdFactory = runIdFactory;
     }
 
     public RunView createRun() {
         String runId = runIdFactory.get();
-        FirstBloomRunSession session = FirstBloomRunSession.create(runId);
-        FirstBloomRunSession previous = sessions.putIfAbsent(runId, session);
+        VerdantRunSession session = VerdantRunSession.create(runId);
+        VerdantRunSession previous = sessions.putIfAbsent(runId, session);
         if (previous != null) {
             throw new IllegalStateException("Duplicate generated run id: " + runId);
         }
@@ -38,7 +38,7 @@ public final class FirstBloomRunCoordinator {
     }
 
     public RunView execute(String runId, RunCommand command) {
-        FirstBloomRunSession session = sessions.get(runId);
+        VerdantRunSession session = sessions.get(runId);
         if (session == null) {
             throw new RunNotFoundException(runId);
         }
@@ -50,10 +50,20 @@ public final class FirstBloomRunCoordinator {
     }
 
     int workerTicks(String runId) {
-        FirstBloomRunSession session = sessions.get(runId);
+        VerdantRunSession session = requiredSession(runId);
+        return session.workerTicks();
+    }
+
+    long logicalTimeMillis(String runId) {
+        VerdantRunSession session = requiredSession(runId);
+        return session.logicalTimeMillis();
+    }
+
+    private VerdantRunSession requiredSession(String runId) {
+        VerdantRunSession session = sessions.get(runId);
         if (session == null) {
             throw new RunNotFoundException(runId);
         }
-        return session.workerTicks();
+        return session;
     }
 }

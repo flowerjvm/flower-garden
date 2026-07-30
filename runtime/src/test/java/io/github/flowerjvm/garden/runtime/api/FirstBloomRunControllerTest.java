@@ -158,6 +158,25 @@ class FirstBloomRunControllerTest {
         assertThat(retry.path("events").size()).isEqualTo(first.path("events").size());
         assertThat(retry.path("events").findValuesAsText("kind"))
                 .containsOnlyOnce("FLOWER.STEP_RESULT");
+
+        ObjectNode collision = validTickCommand(
+                runId,
+                latestSequence(first),
+                "idempotent-tick");
+        mockMvc.perform(post("/api/v1/runs/{runId}/commands", runId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(collision.toString()))
+                .andExpect(status().isBadRequest());
+
+        String originalAfterCollision = mockMvc.perform(
+                        post("/api/v1/runs/{runId}/commands", runId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(command.toString()))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(objectMapper.readTree(originalAfterCollision)).isEqualTo(first);
     }
 
     private JsonNode createReadyRun() throws Exception {

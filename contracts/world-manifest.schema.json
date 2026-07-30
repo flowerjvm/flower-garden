@@ -139,7 +139,11 @@
           "minItems": 0,
           "uniqueItems": true,
           "items": {
-            "const": "TICK"
+            "enum": [
+              "TICK",
+              "ADVANCE_TIME",
+              "SEND_SIGNAL"
+            ]
           }
         }
       },

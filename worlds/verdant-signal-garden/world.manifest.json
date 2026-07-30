@@ -4,21 +4,25 @@
   "id": "verdant-signal-garden",
   "displayName": "Verdant Signal Garden",
   "catalogOrder": 2,
-  "status": "PLANNED",
-  "runtimeModuleId": null,
-  "projectionModuleId": null,
+  "status": "AVAILABLE",
+  "runtimeModuleId": "flower-garden-runtime-gateway",
+  "projectionModuleId": "verdant-signal-garden-web",
   "missions": [
     {
       "id": "signal-vs-timeout",
       "displayName": "Signal vs Timeout",
-      "status": "PLANNED",
+      "status": "AVAILABLE",
       "learningObjectives": [
         "Explain that a Signal wakes a Step while StepResult decides the transition.",
         "Distinguish trace input order from the mission Step's explicit Signal/Timeout check precedence.",
         "Use the actual mission StepResult to explain which downstream path Flower selects.",
         "Confirm that an exited Wait cannot be reopened by a later input."
       ],
-      "allowedCommands": []
+      "allowedCommands": [
+        "TICK",
+        "ADVANCE_TIME",
+        "SEND_SIGNAL"
+      ]
     }
   ]
 }

@@ -1,4 +1,4 @@
-package io.github.flowerjvm.garden.runtime.firstbloom;
+package io.github.flowerjvm.garden.runtime.support;
 
 import io.github.flowerjvm.flower.core.time.ManualClock;
 import io.github.flowerjvm.garden.runtime.api.TraceEvent;
@@ -9,19 +9,26 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-final class MissionTraceRecorder {
+/**
+ * Small, synchronous journal shared by the learning-world runtime slices.
+ *
+ * <p>Every event is stamped from the run's manual Flower clock. The recorder
+ * does not infer transitions; callers append facts observed at the real
+ * coordinator, listener, event-bus, or Step boundary.
+ */
+public final class MissionTraceRecorder {
 
     private final String runId;
     private final ManualClock clock;
     private final List<TraceEvent> events = new ArrayList<>();
     private long nextSequence = 1L;
 
-    MissionTraceRecorder(String runId, ManualClock clock) {
+    public MissionTraceRecorder(String runId, ManualClock clock) {
         this.runId = runId;
         this.clock = clock;
     }
 
-    synchronized TraceEvent append(
+    public synchronized TraceEvent append(
             TraceEvent.Source source,
             String kind,
             TraceEvent.FlowReference flow,
@@ -48,7 +55,7 @@ final class MissionTraceRecorder {
         return event;
     }
 
-    TraceEvent append(
+    public TraceEvent append(
             TraceEvent.Source source,
             String kind,
             TraceEvent.FlowReference flow,
@@ -57,7 +64,7 @@ final class MissionTraceRecorder {
         return append(source, kind, flow, payload, List.of());
     }
 
-    TraceEvent append(
+    public TraceEvent append(
             TraceEvent.Source source,
             String kind,
             TraceEvent.FlowReference flow
@@ -65,11 +72,11 @@ final class MissionTraceRecorder {
         return append(source, kind, flow, Collections.emptyMap(), List.of());
     }
 
-    synchronized List<TraceEvent> snapshot() {
+    public synchronized List<TraceEvent> snapshot() {
         return List.copyOf(events);
     }
 
-    synchronized long lastSequence() {
+    public synchronized long lastSequence() {
         return nextSequence - 1L;
     }
 }

@@ -10,8 +10,9 @@ Flower Garden
 ├─ 01 First Bloom Meadow              AVAILABLE
 │  └─ The First Flow
 │     Engine → Worker → Flow → Step → StepResult
-└─ 02 Verdant Signal Garden           PLANNED · LOCKED
+└─ 02 Verdant Signal Garden           AVAILABLE
    └─ Signal vs Timeout
+      Event → Signal → ManualClock → explicit Step policy
 ```
 
 The first playable mission deliberately comes before Signal, Timeout,
@@ -37,10 +38,10 @@ terminal result.
 See [ADR-0001](docs/adr/0001-runtime-authoritative-world-projection.md) for the
 decision and [the contract guide](contracts/README.md) for the wire contract.
 
-## Current vertical slice
+## Playable vertical slices
 
-**First Bloom Meadow / The First Flow** is the only executable world in v1.
-Its JVM gateway uses the published
+**First Bloom Meadow / The First Flow** introduces the execution core. Its JVM
+gateway uses the published
 `io.github.flowerjvm:flower-core:0.1.1` artifact with:
 
 - `ManualClock`;
@@ -58,14 +59,24 @@ The mission takes four player ticks:
 | 3 | `grow-stem` | `DONE` | advance to `bloom` |
 | 4 | `bloom` | `DONE` | Flow becomes `FINISHED` |
 
-The runtime implementation lives in
+Its runtime implementation lives in
 [`runtime/src/main/java/io/github/flowerjvm/garden/runtime`](runtime/src/main/java/io/github/flowerjvm/garden/runtime),
 and the 3D world lives in
 [`worlds/first-bloom-meadow/web`](worlds/first-bloom-meadow/web).
 
-**Verdant Signal Garden** is curriculum only for now. Its manifest is
-`PLANNED`, its mission is locked, and it has no executable commands or
-canonical runtime fixture yet.
+**Verdant Signal Garden / Signal vs Timeout** adds one controlled layer:
+
+- an actual event subscription that calls `StepContext.signal(...)`;
+- an actual per-run `ManualClock` and 30-second timeout;
+- player commands for `ADVANCE_TIME` and `SEND_SIGNAL`;
+- one real Worker tick where the Step reads `hasSignal(...)` and
+  `timedOut()`;
+- an explicit `SIGNAL_THEN_TIMEOUT` mission policy if both are true;
+- three canonical real-runtime traces: Signal-first, Timeout-first, and
+  both-ready on the same tick.
+
+The 3D garden and its result explanation consume only those runtime records.
+They do not compare timestamps or choose a route in the browser.
 
 ## Prerequisites
 
@@ -93,26 +104,39 @@ The web application runs on `http://localhost:3000`. The gateway runs on
 Set `NEXT_PUBLIC_FLOWER_RUNTIME_URL` before starting the web app to use a
 different gateway.
 
-If the JVM gateway is unavailable, the UI may replay the checked-in First Bloom
-trace. That mode must remain visibly labelled as a prerecorded replay, and its
-controls may only move through recorded events.
+Open the core world at `/` and Verdant Signal Garden at
+`/worlds/verdant-signal-garden`.
 
-## Current v1 API
+If the JVM gateway is unavailable, either UI may replay its matching
+checked-in canonical trace. That mode remains visibly labelled as a
+prerecorded real-runtime replay, and its controls only move a cursor through
+recorded events.
 
-The implemented gateway exposes exactly two operations:
+## Runtime API
+
+The implemented gateway exposes:
 
 ```text
 POST /api/v1/worlds/first-bloom-meadow/runs
+POST /api/v1/worlds/verdant-signal-garden/runs
 POST /api/v1/runs/{runId}/commands
 ```
 
-Both return a `RunView`. Its `events` array is the complete trace from sequence
-`1` through the latest event, not a delta. A valid command contains a unique
-`commandId`, the URL's `runId`, the latest `expectedSequence`, `kind: "TICK"`,
-and an empty payload.
+Every response is a cumulative `RunView`. Its `events` array is the complete
+trace from sequence `1` through the latest event, not a delta. A valid command
+contains a unique `commandId`, the URL's `runId`, and the latest
+`expectedSequence`.
+
+| Command | Payload | Effect |
+| --- | --- | --- |
+| `TICK` | `{}` | Calls this mission Worker's `tickOnce()` exactly once |
+| `ADVANCE_TIME` | `{"millis": 1..300000}` | Advances Verdant's real `ManualClock`; does not tick |
+| `SEND_SIGNAL` | `{"name":"yard-assignment"}` | Publishes Verdant's subscribed mission event |
 
 Retrying a successful `commandId` returns the original cumulative response
-without ticking Flower twice.
+without applying its command twice when the complete command is identical.
+Reusing an id with changed content is rejected. First Bloom accepts only
+`TICK`; Verdant accepts all three commands.
 
 There is no events GET endpoint, SSE stream, database-backed journal, or
 multi-replica routing in the current vertical slice.
@@ -130,7 +154,8 @@ worlds/
     world.manifest.json
     web/
   verdant-signal-garden/
-    world.manifest.json      planned metadata only
+    world.manifest.json
+    web/
 ```
 
 Worlds use small checked-in manifests and compile-time registration. They are
@@ -141,20 +166,21 @@ questions that require multiple completed worlds first.
 ## Verify
 
 ```bash
+mvn -f runtime/pom.xml clean test
+npm run fixtures:verdant:check
 npm test
-mvn -f runtime/pom.xml test
 ```
 
-The runtime tests verify the four actual Flower ticks, cumulative trace order,
-optimistic sequence checking, and idempotent command retry without sleeps. The
-canonical fixture is
-[`contracts/fixtures/first-bloom-the-first-flow.trace.json`](contracts/fixtures/first-bloom-the-first-flow.trace.json).
+The runtime tests verify the four core ticks and all three Signal/Timeout
+outcomes with actual Flower execution and no sleeps. They also verify
+cumulative trace order, strict payload validation, optimistic sequence
+checking, and idempotent command retry. Canonical replay fixtures live in
+[`contracts/fixtures`](contracts/fixtures).
 
 ## Explicitly deferred
 
-The following are not part of v1:
+The following are intentionally not implemented yet:
 
-- Signal/Timeout execution commands;
 - checkpoint, retry, failure injection, or Worker stop controls;
 - event polling and SSE reconnect;
 - database persistence or a durable trace journal;
