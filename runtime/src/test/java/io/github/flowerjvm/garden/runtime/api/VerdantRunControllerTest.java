@@ -129,7 +129,7 @@ class VerdantRunControllerTest {
                 .andExpect(jsonPath("$.schemaVersion").value("1.0.0"))
                 .andExpect(jsonPath("$.worldId").value("verdant-signal-garden"))
                 .andExpect(jsonPath("$.missionId").value("signal-vs-timeout"))
-                .andExpect(jsonPath("$.flowerRuntimeVersion").value("0.1.1"))
+                .andExpect(jsonPath("$.flowerRuntimeVersion").value("0.1.2"))
                 .andExpect(jsonPath("$.phase").value("READY"))
                 .andExpect(jsonPath("$.currentStepId").doesNotExist())
                 .andReturn()

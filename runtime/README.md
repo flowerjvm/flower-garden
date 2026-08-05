@@ -1,7 +1,7 @@
 # Flower Garden Runtime Gateway
 
 This Spring Boot service is the authoritative runtime boundary for Flower
-Garden. It uses the published `io.github.flowerjvm:flower-core:0.1.1`
+Garden. It uses the published `io.github.flowerjvm:flower-core:0.1.2`
 artifact; the browser never advances a learning Flow on its own.
 
 ## First world

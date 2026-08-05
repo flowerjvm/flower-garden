@@ -304,7 +304,7 @@ test("three Verdant replays preserve the actual Signal and Timeout decisions", a
     assert.equal(fixture.worldId, "verdant-signal-garden");
     assert.equal(fixture.missionId, "signal-vs-timeout");
     assert.equal(fixture.scenarioId, scenario.id);
-    assert.equal(fixture.flowerVersion, "0.1.1");
+    assert.equal(fixture.flowerVersion, "0.1.2");
     assert.equal(fixture.expectedOutcome.winner, scenario.winner);
     assert.equal(fixture.expectedOutcome.finalState, scenario.finalState);
     assert.equal(

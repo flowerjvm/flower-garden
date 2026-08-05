@@ -100,7 +100,7 @@ dependencies. Later launches rebuild only when the source has changed.
 `PLAY.cmd` handles the complete local session:
 
 1. verifies the required tools;
-2. starts the actual Flower `0.1.1` JVM Runtime;
+2. starts the actual Flower `0.1.2` JVM Runtime;
 3. builds and starts the 3D web application;
 4. opens the world library at `http://127.0.0.1:3000/`;
 5. stops only the processes that it started.

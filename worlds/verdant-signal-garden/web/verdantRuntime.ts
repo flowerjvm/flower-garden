@@ -258,8 +258,8 @@ export function normalizeVerdantTraceBundle(
       `traceBundle.scenarioId must be ${expectedScenarioId}.`,
     );
   }
-  if (bundle.flowerVersion !== "0.1.1") {
-    throw new Error("traceBundle.flowerVersion must be 0.1.1.");
+  if (bundle.flowerVersion !== "0.1.2") {
+    throw new Error("traceBundle.flowerVersion must be 0.1.2.");
   }
   if (bundle.flowDefinitionVersion !== "verdant-signal-v1") {
     throw new Error(

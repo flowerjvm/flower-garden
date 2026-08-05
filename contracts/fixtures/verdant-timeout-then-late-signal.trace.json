@@ -5,7 +5,7 @@
   "worldId": "verdant-signal-garden",
   "missionId": "signal-vs-timeout",
   "scenarioId": "timeout-then-late-signal",
-  "flowerVersion": "0.1.1",
+  "flowerVersion": "0.1.2",
   "flowDefinitionVersion": "verdant-signal-v1",
   "projectionVersion": "verdant-signal-projection-v1",
   "events": [

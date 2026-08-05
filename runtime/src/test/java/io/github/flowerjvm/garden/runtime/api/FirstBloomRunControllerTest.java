@@ -261,7 +261,7 @@ class FirstBloomRunControllerTest {
                 .andExpect(jsonPath("$.schemaVersion").value("1.0.0"))
                 .andExpect(jsonPath("$.worldId").value("first-bloom-meadow"))
                 .andExpect(jsonPath("$.missionId").value("the-first-flow"))
-                .andExpect(jsonPath("$.flowerRuntimeVersion").value("0.1.1"))
+                .andExpect(jsonPath("$.flowerRuntimeVersion").value("0.1.2"))
                 .andExpect(jsonPath("$.phase").value("READY"))
                 .andExpect(jsonPath("$.currentStepId").doesNotExist())
                 .andReturn()

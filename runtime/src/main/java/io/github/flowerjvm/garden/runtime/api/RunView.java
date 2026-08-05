@@ -22,7 +22,7 @@ public record RunView(
         Outcome outcome
 ) {
     public static final String SCHEMA_VERSION = "1.0.0";
-    public static final String FLOWER_RUNTIME_VERSION = "0.1.1";
+    public static final String FLOWER_RUNTIME_VERSION = "0.1.2";
 
     public RunView {
         events = List.copyOf(events);

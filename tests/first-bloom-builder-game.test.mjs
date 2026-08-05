@@ -83,7 +83,7 @@ function runtimeRun({
     runId,
     worldId,
     missionId,
-    flowerRuntimeVersion: "0.1.1",
+    flowerRuntimeVersion: "0.1.2",
     phase: "READY",
     currentStepId: null,
     events,

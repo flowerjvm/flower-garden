@@ -31,7 +31,7 @@ function assertCanonicalRun(run, source) {
     run.schemaVersion !== "1.0.0" ||
     run.worldId !== "verdant-signal-garden" ||
     run.missionId !== "signal-vs-timeout" ||
-    run.flowerRuntimeVersion !== "0.1.1" ||
+    run.flowerRuntimeVersion !== "0.1.2" ||
     run.phase !== "FINISHED" ||
     !Array.isArray(run.events) ||
     run.events.length === 0 ||

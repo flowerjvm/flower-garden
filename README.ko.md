@@ -99,7 +99,7 @@ cd flower-garden
 `PLAY.cmd`가 한 번에 처리하는 작업:
 
 1. 실행 환경 확인
-2. 실제 Flower `0.1.1` JVM Runtime 시작
+2. 실제 Flower `0.1.2` JVM Runtime 시작
 3. 3D 웹 애플리케이션 빌드 및 시작
 4. `http://127.0.0.1:3000/` 월드 선택 화면 열기
 5. 종료 시 런처가 시작한 프로세스만 정리

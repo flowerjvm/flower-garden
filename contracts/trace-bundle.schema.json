@@ -36,7 +36,7 @@
       "$ref": "trace-event.schema.json#/$defs/slug"
     },
     "flowerVersion": {
-      "const": "0.1.1"
+      "const": "0.1.2"
     },
     "flowDefinitionVersion": {
       "$ref": "trace-event.schema.json#/$defs/id"

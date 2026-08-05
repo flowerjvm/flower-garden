@@ -56,7 +56,7 @@ function Test-FlowerRuntime {
         return (
             $response.StatusCode -eq 200 -and
             $run.worldId -eq "verdant-signal-garden" -and
-            $run.flowerRuntimeVersion -eq "0.1.1"
+            $run.flowerRuntimeVersion -eq "0.1.2"
         )
     }
     catch {
@@ -197,7 +197,7 @@ function Assert-LiveVerdantMission {
         Select-Object -Last 1
 
     if (
-        $run.flowerRuntimeVersion -ne "0.1.1" -or
+        $run.flowerRuntimeVersion -ne "0.1.2" -or
         $run.phase -ne "FINISHED" -or
         $run.outcome.status -ne "COMPLETED" -or
         $run.outcome.finalState -ne "SIGNALED" -or
@@ -521,7 +521,7 @@ try {
 
     if (-not $runtimeReady) {
         Assert-Java
-        Write-Step "Starting the actual Flower 0.1.1 Runtime..."
+        Write-Step "Starting the actual Flower 0.1.2 Runtime..."
         $hadServerAddress = Test-Path Env:\SERVER_ADDRESS
         $previousServerAddress = $env:SERVER_ADDRESS
         $env:SERVER_ADDRESS = "127.0.0.1"

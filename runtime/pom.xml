@@ -19,8 +19,8 @@
 
     <properties>
         <java.version>17</java.version>
-        <flower.version>0.1.1</flower.version>
-        <bloom.version>0.1.0</bloom.version>
+        <flower.version>0.1.2</flower.version>
+        <bloom.version>0.1.1</bloom.version>
     </properties>
 
     <dependencies>
